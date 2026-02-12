@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Test outputs
+tests/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.claude
+
+# Logs
+*.log
+npm-debug.log*
+
+# Database (development)
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+tmp/
+temp/
+
+BUGS.md
+CLAUDE.md
+NEW_FEATURES.md
+project-spec.md
+QUICK-START.md
+TROUBLESHOOTING.md
+WINDOWS_BUILD_NOTES.md
+
+# Code signing certificates (NEVER commit these!)
+*.pfx
+*.p12
+*.cer
+*.cert
+*.pem
+build/certs/
+
+# macOS keychain files
+*.keychain
+*.keychain-db

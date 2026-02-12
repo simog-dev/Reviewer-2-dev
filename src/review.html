@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: file:; img-src 'self' data: blob:; frame-src https:; connect-src 'self' https://generativelanguage.googleapis.com">
+  <title>Reviewer 2 - Review</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/review.css">
+</head>
+<body>
+  <div class="review-container">
+    <!-- Toolbar -->
+    <header class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn btn-ghost btn-back" id="btn-back" title="Back to Home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back
+        </button>
+        <span class="pdf-title" id="pdf-title">Loading...</span>
+      </div>
+
+      <div class="toolbar-center">
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+          <button class="btn btn-ghost btn-icon btn-zoom" id="btn-zoom-out" title="Zoom Out (Ctrl+-)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </button>
+          <select class="select zoom-select" id="zoom-select" title="Zoom Level">
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1" selected>100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+            <option value="fit-width">Fit Width</option>
+          </select>
+          <button class="btn btn-ghost btn-icon btn-zoom" id="btn-zoom-in" title="Zoom In (Ctrl++)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="11" y1="8" x2="11" y2="14"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Page Indicator -->
+        <div class="page-indicator">
+          <span id="current-page">1</span>
+          <span>/</span>
+          <span id="total-pages">1</span>
+        </div>
+
+        <!-- Dual Page Toggle -->
+        <button class="btn btn-secondary btn-dual-page" id="btn-dual-page" title="Dual Page View (D)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="8" height="18" rx="1"/>
+            <rect x="14" y="3" width="8" height="18" rx="1"/>
+          </svg>
+        </button>
+
+        <!-- Highlight Mode Toggle -->
+        <button class="btn btn-secondary btn-highlight" id="btn-highlight" title="Highlight Mode (H)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          Highlight
+        </button>
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Theme Toggle -->
+        <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Theme">
+          <!-- Icon will be updated dynamically by JS -->
+        </button>
+
+        <!-- Mark Completed Button -->
+        <button class="btn btn-secondary" id="btn-mark-completed" title="Mark as Completed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span id="completion-btn-text">Mark as Completed</span>
+        </button>
+
+        <!-- Export Button -->
+        <div style="position: relative;">
+          <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export
+          </button>
+          <div class="export-menu" id="export-menu">
+            <div class="export-menu-item" data-format="json">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Export as JSON
+            </div>
+            <div class="export-menu-item" data-format="csv">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="8" y1="13" x2="16" y2="13"/>
+                <line x1="8" y1="17" x2="16" y2="17"/>
+              </svg>
+              Export as CSV
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- PDF Panel -->
+      <div class="pdf-panel" id="pdf-panel">
+        <!-- PDF Search Bar -->
+        <div class="pdf-search-bar" id="pdf-search-bar">
+          <input type="text" class="pdf-search-input" id="pdf-search-input" placeholder="Search in PDF...">
+          <span class="pdf-search-count" id="pdf-search-count"></span>
+          <button class="pdf-search-btn" id="pdf-search-prev" title="Previous (Shift+Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+          <button class="pdf-search-btn" id="pdf-search-next" title="Next (Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <button class="pdf-search-btn" id="pdf-search-close" title="Close (Esc)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="pdf-viewer-container" id="pdf-viewer-container">
+          <!-- Loading State -->
+          <div class="pdf-loading" id="pdf-loading">
+            <div class="spinner spinner-lg"></div>
+            <span class="loading-text">Loading PDF...</span>
+          </div>
+          <!-- PDF Pages Container -->
+          <div class="pdf-viewer" id="pdf-viewer"></div>
+        </div>
+      </div>
+
+      <!-- Panel Resizer 1 -->
+      <div class="panel-resizer" id="panel-resizer-1"></div>
+
+      <!-- Annotation Panel -->
+      <div class="annotation-panel" id="annotation-panel">
+        <span class="collapsed-indicator">Annotations</span>
+        <button class="collapse-btn" id="collapse-annotations" title="Collapse Annotation Panel (Ctrl+])">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="annotation-panel-content">
+          <!-- Panel Header -->
+          <div class="annotation-panel-header">
+            <h2 class="annotation-panel-title">Annotations</h2>
+            <span class="annotation-count" id="annotation-count">0</span>
+            <div class="sort-container">
+              <select class="select sort-select" id="sort-select" title="Sort Annotations">
+                <option value="page" selected>By Page</option>
+                <option value="date">By Date</option>
+                <option value="category">By Category</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Category Filters -->
+          <div class="category-filters" id="category-filters">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- Add Note Button -->
+          <div class="add-note-section">
+            <button class="btn btn-ghost btn-add-note" id="btn-add-free-note"
+                    title="Add a note without highlighting text (N)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>Note</span>
+            </button>
+          </div>
+
+          <!-- Annotation List -->
+          <div class="annotation-list" id="annotation-list">
+            <div class="annotation-list-empty" id="annotation-list-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <div class="annotation-list-empty-title">No annotations yet</div>
+              <div class="annotation-list-empty-text">
+                Enable highlight mode and select text in the PDF to create annotations.
+              </div>
+            </div>
+          </div>
+
+          <!-- Generate Review Button -->
+          <div class="generate-review-container">
+            <button class="btn btn-primary btn-generate-review" id="btn-generate-review" disabled>
+              <span class="generate-review-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </span>
+              <span class="generate-review-label">Generate Review</span>
+              <span class="generate-review-spinner" style="display:none"><div class="spinner"></div></span>
+            </button>
+
+            <!-- LLM Configuration Tooltip -->
+            <div class="llm-config-tooltip" id="llm-config-tooltip">
+              <div class="llm-config-tooltip-content">
+                <svg class="llm-config-tooltip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <circle cx="12" cy="9" r="0.6" fill="currentColor"/>
+                </svg>
+                <p class="llm-config-tooltip-text">
+                  API key required to generate reviews.
+                  <br>
+                  Configure it in <span class="llm-config-settings-link" id="llm-config-settings-link">settings</span>.
+                </p>
+              </div>
+              <div class="llm-config-tooltip-arrow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Resizer 2 -->
+      <div class="panel-resizer" id="panel-resizer-2"></div>
+
+      <!-- Search Panel -->
+      <div class="search-panel" id="search-panel">
+        <span class="collapsed-indicator">Search</span>
+        <button class="collapse-btn" id="collapse-search" title="Collapse Search Panel (Ctrl+/)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="search-panel-content">
+          <div class="search-panel-header">
+            <button class="btn btn-ghost btn-icon" id="btn-webview-back" title="Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </button>
+            <button class="btn btn-ghost btn-icon" id="btn-webview-forward" title="Forward">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            <button class="btn btn-ghost btn-icon" id="btn-webview-reload" title="Reload">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+            <input type="text" class="webview-url-bar" id="webview-url-bar" placeholder="Enter URL..." value="https://www.google.com">
+          </div>
+          <webview src="https://www.google.com" nodeintegration="false" id="search-webview"></webview>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Selection Popup -->
+  <div class="selection-popup" id="selection-popup">
+    <div class="popup-actions">
+      <button class="popup-action-btn highlight-btn" id="btn-quick-highlight" data-tooltip="Highlight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/>
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+      </button>
+      <button class="popup-action-btn annotate-btn" id="btn-annotate" data-tooltip="Annotate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="category-selection hidden" id="category-selection">
+      <div class="selection-popup-title">Select category:</div>
+      <div class="category-buttons" id="category-buttons">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Highlight Popup (for existing highlights) -->
+  <div class="highlight-popup" id="highlight-popup">
+    <button class="popup-action-btn delete-btn" id="btn-highlight-delete" data-tooltip="Remove">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+    </button>
+    <button class="popup-action-btn convert-btn" id="btn-highlight-convert" data-tooltip="Convert to Annotation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Citation Popup (for reference citations) -->
+  <div class="citation-popup" id="citation-popup">
+    <div class="citation-popup-content">
+      <div class="citation-reference-list" id="citation-reference-list">
+        <!-- Populated dynamically with references -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotation Modal -->
+  <div class="modal-overlay annotation-modal" id="annotation-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Add Annotation</h3>
+        <button class="modal-close" id="modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Show for text-based annotations only -->
+        <div class="form-group" id="selected-text-group">
+          <label class="form-label">Selected Text</label>
+          <div class="selected-text-preview" id="selected-text-preview"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <div class="category-display">
+            <span class="category-badge" id="category-badge"></span>
+            <select class="select" id="category-select" style="flex: 1;">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="comment-input">Comment</label>
+          <textarea class="textarea comment-textarea" id="comment-input" placeholder="Add your comment..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completion Modal -->
+  <div class="modal-overlay" id="completion-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="completion-modal-title">Mark as Completed</h3>
+        <button class="modal-close" id="completion-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="review-decision-select">Review Decision</label>
+          <select class="select" id="review-decision-select">
+            <option value="accept">Accept</option>
+            <option value="minor-revisions">Minor Revisions</option>
+            <option value="major-revisions">Major Revisions</option>
+            <option value="reject">Reject</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="completion-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="completion-modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Not Found Modal -->
+  <div class="modal-overlay" id="pdf-not-found-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">PDF File Not Found</h3>
+        <button class="modal-close" id="pdf-not-found-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Cannot find the PDF file at:</p>
+        <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 8px; margin: 12px 0; font-family: monospace; word-break: break-all; font-size: 13px;" id="pdf-not-found-path"></div>
+        <p style="margin-top: 12px;">The file may have been moved, renamed, or deleted.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pdf-not-found-back">Go Back</button>
+        <button class="btn btn-primary" id="pdf-not-found-reload">Select New File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="delete-annotation-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Annotation</h3>
+        <button class="modal-close" id="delete-annotation-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this annotation? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="delete-annotation-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="delete-annotation-modal-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu hidden" id="context-menu">
+    <div class="context-menu-item" data-action="edit">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Edit Comment
+    </div>
+    <div class="context-menu-item" data-action="change-category">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 12h8"/>
+        <path d="M12 8v8"/>
+      </svg>
+      Change Category
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item danger" data-action="delete">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Delete
+    </div>
+  </div>
+
+  <!-- Category Change Menu -->
+  <div class="context-menu hidden" id="category-menu">
+    <!-- Populated dynamically -->
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="js/review.js"></script>
+</body>
+</html>

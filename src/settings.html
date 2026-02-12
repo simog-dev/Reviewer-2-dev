@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: file:; img-src 'self' data: blob:">
+  <title>Reviewer 2 - Settings</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <button class="btn btn-ghost btn-back" id="btn-back" title="Back to Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Back
+      </button>
+      <span class="settings-title">Settings</span>
+    </header>
+
+    <div class="settings-body">
+      <div class="settings-card">
+
+        <!-- Highlight Categories Section -->
+        <div class="settings-section">
+          <div class="settings-section-title">Highlight Categories</div>
+          <div class="category-limits-hint" id="category-limits-hint"></div>
+          <div class="category-list" id="category-list"></div>
+          <button class="btn btn-secondary btn-add-category" id="btn-add-category">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Category
+          </button>
+        </div>
+
+        <!-- LLM / AI Section -->
+        <div class="settings-section">
+          <div class="settings-section-title">AI Review Generation</div>
+
+          <div class="form-group">
+            <label class="form-label" for="api-key-input">API Key</label>
+            <div class="api-key-wrapper">
+              <input type="password" class="input" id="api-key-input" placeholder="Enter your Google Gemini API key...">
+              <button class="btn-toggle-visibility" id="btn-toggle-key" title="Show/hide key" type="button">
+                <!-- Eye icon (visible when key is hidden) -->
+                <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <!-- Eye-slash icon (visible when key is showing) -->
+                <svg id="eye-slash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+            </div>
+            <span class="form-hint">Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="provider-select">Provider</label>
+            <select class="select" id="provider-select">
+              <option value="google">Google Gemini</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="model-input">Model</label>
+            <input type="text" class="input" id="model-input" placeholder="e.g. gemini-2.5-flash">
+            <span class="form-hint">See available models at <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank">Google Gemini API docs</a></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Temperature</label>
+            <div class="temperature-row">
+              <input type="range" id="temperature-slider" min="0" max="1" step="0.1" value="0.7">
+              <span class="temperature-value" id="temperature-value">0.7</span>
+            </div>
+            <span class="form-hint">Controls creativity. Lower = more focused, Higher = more creative.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="prompt-input">System Prompt</label>
+            <textarea class="textarea prompt-textarea" id="prompt-input" placeholder="Enter your custom system prompt..."></textarea>
+            <span class="form-hint">Instructions for the AI when generating the review.</span>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button class="btn btn-primary btn-save-settings" id="btn-save">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Rename Category Confirmation Modal -->
+  <div class="modal-overlay" id="rename-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Rename Category</h3>
+        <button class="modal-close" id="rename-modal-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="rename-modal-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="rename-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="rename-modal-confirm">Rename</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/settings.js"></script>
+</body>
+</html>

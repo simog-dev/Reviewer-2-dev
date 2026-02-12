@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Professional PDF annotation app with categorized comments. Review documents efficiently with Critical, Major, Minor, Suggestion, and Question categories.">
+    <meta name="keywords" content="PDF, annotation, review, document, comments, peer review">
+    <meta name="author" content="Reviewer 2">
+    <title>Reviewer 2 - Professional PDF Annotation Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav container">
+            <div class="nav-brand">
+                <h1 class="brand-title">Reviewer 2</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#screenshots" class="nav-link">Screenshots</a></li>
+                <li><a href="#download" class="nav-link">Download</a></li>
+                <li><a href="https://github.com/YOUR_USERNAME/reviewer" target="_blank" class="nav-link">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="hero-title">Professional PDF Annotation Tool</h2>
+                <p class="hero-subtitle">
+                    Review documents efficiently with categorized comments.
+                    Built for researchers, editors, and professionals who need powerful annotation tools.
+                </p>
+                <div class="hero-cta">
+                    <a href="#download" class="btn btn-primary" id="primary-download-btn">
+                        <span class="btn-icon">⬇</span>
+                        <span class="btn-text">Download for <span id="detected-os">Your OS</span></span>
+                    </a>
+                    <a href="https://github.com/YOUR_USERNAME/reviewer/releases" target="_blank" class="btn btn-secondary">
+                        <span class="btn-text">View All Releases</span>
+                    </a>
+                </div>
+                <div class="version-info">
+                    <span id="latest-version">Loading version...</span>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="assets/hero-screenshot.png" alt="Reviewer 2 Screenshot" class="screenshot-main" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22800%22 height=%22500%22%3E%3Crect fill=%22%231a1a1a%22 width=%22800%22 height=%22500%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2224%22 fill=%22%23666%22%3EScreenshot Placeholder%3C/text%3E%3C/svg%3E'">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🏷️</div>
+                    <h3 class="feature-title">Categorized Comments</h3>
+                    <p class="feature-description">
+                        Organize annotations with five built-in categories: Critical, Major, Minor, Suggestion, and Question.
+                        Each category has distinct colors and icons for instant visual recognition.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3 class="feature-title">Text Highlighting</h3>
+                    <p class="feature-description">
+                        Select any text in your PDF and create highlighted annotations.
+                        All highlights are stored with precise coordinates and synchronized across the document.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📤</div>
+                    <h3 class="feature-title">Export Options</h3>
+                    <p class="feature-description">
+                        Export all annotations to JSON or Markdown format.
+                        Perfect for sharing reviews, generating reports, or archiving feedback.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3 class="feature-title">Search & Filter</h3>
+                    <p class="feature-description">
+                        Quickly find annotations by category, content, or page number.
+                        Advanced filtering helps you focus on specific types of feedback.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌓</div>
+                    <h3 class="feature-title">Dark/Light Mode</h3>
+                    <p class="feature-description">
+                        Comfortable reading experience with automatic theme switching.
+                        Dark mode by default, with seamless light mode support.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3 class="feature-title">Local Storage</h3>
+                    <p class="feature-description">
+                        All data stored locally in SQLite database.
+                        Your documents and annotations never leave your computer. Zero cloud dependencies.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section id="screenshots" class="screenshots">
+        <div class="container">
+            <h2 class="section-title">Screenshots</h2>
+            <div class="screenshots-carousel">
+                <div class="carousel-item">
+                    <img src="assets/feature-1.png" alt="Annotation Interface" class="carousel-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22400%22%3E%3Crect fill=%22%231a1a1a%22 width=%22600%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2220%22 fill=%22%23666%22%3EAnnotation Interface%3C/text%3E%3C/svg%3E'">
+                    <p class="carousel-caption">Create categorized annotations with a single click</p>
+                </div>
+                <div class="carousel-item">
+                    <img src="assets/feature-2.png" alt="Category Management" class="carousel-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22400%22%3E%3Crect fill=%22%231a1a1a%22 width=%22600%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2220%22 fill=%22%23666%22%3ECategory Management%3C/text%3E%3C/svg%3E'">
+                    <p class="carousel-caption">Filter and organize by category</p>
+                </div>
+                <div class="carousel-item">
+                    <img src="assets/feature-3.png" alt="Export Features" class="carousel-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22400%22%3E%3Crect fill=%22%231a1a1a%22 width=%22600%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2220%22 fill=%22%23666%22%3EExport Features%3C/text%3E%3C/svg%3E'">
+                    <p class="carousel-caption">Export to JSON or Markdown</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="container">
+            <h2 class="section-title">Download</h2>
+            <div class="download-grid">
+                <!-- Windows -->
+                <div class="download-card">
+                    <div class="download-icon">🪟</div>
+                    <h3 class="download-platform">Windows</h3>
+                    <p class="download-description">Windows 10 and later (64-bit)</p>
+                    <a href="#" class="btn btn-download" id="download-windows" data-platform="windows">
+                        <span class="btn-text">Download .exe</span>
+                    </a>
+                    <div class="download-notes">
+                        <p class="note-title">Installation Notes:</p>
+                        <ul class="note-list">
+                            <li>Run the downloaded installer</li>
+                            <li>You may see "Windows protected your PC" warning</li>
+                            <li>Click "More info" → "Run anyway"</li>
+                            <li>Auto-update is fully supported</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- macOS -->
+                <div class="download-card">
+                    <div class="download-icon">🍎</div>
+                    <h3 class="download-platform">macOS</h3>
+                    <p class="download-description">macOS 10.15 (Catalina) and later</p>
+                    <a href="#" class="btn btn-download" id="download-macos" data-platform="macos">
+                        <span class="btn-text">Download .dmg</span>
+                    </a>
+                    <div class="download-notes">
+                        <p class="note-title">Installation Notes:</p>
+                        <ul class="note-list">
+                            <li>Open DMG and drag app to Applications</li>
+                            <li>First launch: Right-click → Open</li>
+                            <li>Or run: <code>xattr -cr "/Applications/Reviewer 2.app"</code></li>
+                            <li>Auto-update requires manual download (no Apple notarization)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Linux -->
+                <div class="download-card">
+                    <div class="download-icon">🐧</div>
+                    <h3 class="download-platform">Linux</h3>
+                    <p class="download-description">Ubuntu, Debian, Fedora, and others</p>
+                    <a href="#" class="btn btn-download" id="download-linux" data-platform="linux">
+                        <span class="btn-text">Download .AppImage</span>
+                    </a>
+                    <div class="download-notes">
+                        <p class="note-title">Installation Notes:</p>
+                        <ul class="note-list">
+                            <li>Make executable: <code>chmod +x Reviewer*.AppImage</code></li>
+                            <li>Run: <code>./Reviewer*.AppImage</code></li>
+                            <li>Or use .deb package for Debian/Ubuntu</li>
+                            <li>Auto-update support varies by distribution</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Releases Link -->
+            <div class="all-releases">
+                <a href="https://github.com/YOUR_USERNAME/reviewer/releases" target="_blank" class="link-releases">
+                    View all releases on GitHub →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4 class="footer-title">Reviewer 2</h4>
+                    <p class="footer-description">
+                        Professional PDF annotation tool for researchers and professionals.
+                        Open source and free forever.
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/YOUR_USERNAME/reviewer" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://github.com/YOUR_USERNAME/reviewer/issues" target="_blank">Report Issues</a></li>
+                        <li><a href="https://github.com/YOUR_USERNAME/reviewer/releases" target="_blank">Release Notes</a></li>
+                        <li><a href="https://github.com/YOUR_USERNAME/reviewer#readme" target="_blank">Documentation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-title">License</h4>
+                    <p class="footer-description">
+                        MIT License - Free to use, modify, and distribute.
+                    </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Reviewer 2. Built with Electron.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

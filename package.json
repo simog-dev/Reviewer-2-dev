@@ -1,0 +1,99 @@
+{
+  "name": "reviewer-2",
+  "version": "1.0.1",
+  "description": "Professional peer review application for scholarly documents",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "rebuild": "npx @electron/rebuild -f -w better-sqlite3",
+    "postinstall": "npx @electron/rebuild -f -w better-sqlite3 || true",
+    "test": "node tests/run-all-tests.js",
+    "test:install": "node tests/install.test.js",
+    "test:unit": "node tests/unit/run-unit-tests.js",
+    "test:e2e": "npx playwright test --config playwright.config.js",
+    "test:e2e:headed": "npx playwright test --config playwright.config.js --headed",
+    "test:report": "node tests/generate-report.js",
+    "test:pdf": "node tests/pdf-loading.test.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "better-sqlite3": "^11.7.0",
+    "electron-updater": "^6.7.3",
+    "pdfjs-dist": "^4.9.155",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "@playwright/test": "^1.49.1",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "playwright": "^1.49.1"
+  },
+  "build": {
+    "appId": "com.reviewer2.app",
+    "productName": "Reviewer 2",
+    "executableName": "Reviewer2",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_USERNAME",
+      "repo": "reviewer",
+      "releaseType": "release"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "src/logo/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "icon": "src/logo/icon.ico",
+      "target": {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      "certificateSubjectName": "Reviewer2",
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "icon": "src/logo/icon.ico",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office"
+    }
+  }
+}
