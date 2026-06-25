@@ -1,12 +1,12 @@
 // PDF.js Viewer for Electron
-// Compatible with pdfjs-dist v4.x
+// Compatible with pdfjs-dist v6.x
 
-import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.min.mjs';
+import * as pdfjsLib from '../../node_modules/pdfjs-dist/legacy/build/pdf.min.mjs';
 import { extractReferencesFromPages, findCitationsInText, parseCitationNumbers } from './reference-parser.js';
 
 // Initialize PDF.js worker
 const basePath = new URL('..', window.location.href).href;
-const pdfjsWorkerSrc = `${basePath}node_modules/pdfjs-dist/build/pdf.worker.min.mjs`;
+const pdfjsWorkerSrc = `${basePath}node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
 
 async function initPdfJs() {
@@ -15,6 +15,7 @@ async function initPdfJs() {
 
 // Pages within this many viewport heights of the visible area are pre-rendered
 const RENDER_BUFFER_VIEWPORTS = 2;
+const PDF_TO_CSS_UNITS = pdfjsLib.PixelsPerInch?.PDF_TO_CSS_UNITS || (96 / 72);
 
 // Category highlight colors (rgba with alpha for fill)
 const CATEGORY_COLORS = {
@@ -58,6 +59,7 @@ export class PDFViewer {
     this.pageContentBands = new Map();  // pageNumber → {minY, maxY} in PDF coords
     this.refPages = new Set();          // pages that contain reference entries
     this.refFormat = 'bracket';         // 'bracket' ([N]) or 'dot' (N.)
+    this.textLayerSelectionCleanupBound = false;
 
     this.init();
   }
@@ -69,6 +71,10 @@ export class PDFViewer {
 
     this.setupScrollListener();
     this.setupSelectionListener();
+  }
+
+  _viewportScale(scale = this.scale) {
+    return scale * PDF_TO_CSS_UNITS;
   }
 
   async load(data) {
@@ -129,7 +135,7 @@ export class PDFViewer {
     for (let i = 1; i <= this.totalPages; i++) {
       const page = await this.pdf.getPage(i);
       this.pages[i - 1] = page;
-      const viewport = page.getViewport({ scale: this.scale });
+      const viewport = page.getViewport({ scale: this._viewportScale() });
 
       const pageContainer = document.createElement('div');
       pageContainer.className = 'pdf-page';
@@ -174,8 +180,9 @@ export class PDFViewer {
         if (this.highlightModeEnabled) return;
 
         const pageRect = pageContainer.getBoundingClientRect();
-        const clickX = (e.clientX - pageRect.left) / this.scale;
-        const clickY = (e.clientY - pageRect.top) / this.scale;
+        const coordinateScale = this._viewportScale();
+        const clickX = (e.clientX - pageRect.left) / coordinateScale;
+        const clickY = (e.clientY - pageRect.top) / coordinateScale;
 
         // First check for annotations
         const hitAnnotation = this.annotations.find(ann => {
@@ -211,8 +218,9 @@ export class PDFViewer {
         if (this.highlightModeEnabled) return;
 
         const pageRect = pageContainer.getBoundingClientRect();
-        const clickX = (e.clientX - pageRect.left) / this.scale;
-        const clickY = (e.clientY - pageRect.top) / this.scale;
+        const coordinateScale = this._viewportScale();
+        const clickX = (e.clientX - pageRect.left) / coordinateScale;
+        const clickY = (e.clientY - pageRect.top) / coordinateScale;
 
         const hitAnnotation = this.annotations.find(ann => {
           if (ann.page_number !== pageNumber) return false;
@@ -237,8 +245,9 @@ export class PDFViewer {
         }
 
         const pageRect = pageContainer.getBoundingClientRect();
-        const mx = (e.clientX - pageRect.left) / this.scale;
-        const my = (e.clientY - pageRect.top) / this.scale;
+        const coordinateScale = this._viewportScale();
+        const mx = (e.clientX - pageRect.left) / coordinateScale;
+        const my = (e.clientY - pageRect.top) / coordinateScale;
 
         // Check annotations
         const overAnnotation = this.annotations.some(ann => {
@@ -397,8 +406,9 @@ export class PDFViewer {
 
     // Canvas renders at device-pixel resolution for crisp output on retina displays.
     // CSS size stays at layout resolution so the page occupies the correct space.
-    const renderViewport = page.getViewport({ scale: this.scale * pixelRatio });
-    const layoutViewport = page.getViewport({ scale: this.scale });
+    const layoutScale = this._viewportScale();
+    const renderViewport = page.getViewport({ scale: layoutScale * pixelRatio });
+    const layoutViewport = page.getViewport({ scale: layoutScale });
 
     const context = canvas.getContext('2d');
     canvas.width = renderViewport.width;
@@ -427,7 +437,10 @@ export class PDFViewer {
     // Ensure --scale-factor is set correctly before rendering
     textLayerDiv.style.setProperty('--scale-factor', layoutViewport.scale);
     try {
-      const textContent = await page.getTextContent({ includeMarkedContent: true });
+      const textContent = await page.getTextContent({
+        includeMarkedContent: true,
+        disableNormalization: true
+      });
 
       // Filter out watermark text (e.g. "For Peer Review") that overlaps real content
       textContent.items = textContent.items.filter(item => {
@@ -450,6 +463,7 @@ export class PDFViewer {
           textDivs: []
         }).promise;
       }
+      this._ensureTextLayerSelectionSentinel(textLayerDiv);
     } catch (textError) {
       console.warn('Text layer rendering failed:', textError);
     }
@@ -466,7 +480,7 @@ export class PDFViewer {
       const containerWidth = this.container.clientWidth - 48; // padding
       const page = this.pages[0];
       if (page) {
-        const viewport = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: PDF_TO_CSS_UNITS });
         if (this.dualPageMode) {
           // Two pages + gap (16px)
           newScale = (containerWidth - 16) / (viewport.width * 2);
@@ -487,7 +501,7 @@ export class PDFViewer {
       const page = this.pages[pageNumber - 1];
       if (!page) return;
 
-      const viewport = page.getViewport({ scale: this.scale });
+      const viewport = page.getViewport({ scale: this._viewportScale() });
       elements.container.style.width = `${viewport.width}px`;
       elements.container.style.height = `${viewport.height}px`;
       elements.viewport = viewport;
@@ -523,6 +537,10 @@ export class PDFViewer {
 
   getScale() {
     return this.scale;
+  }
+
+  getCoordinateScale() {
+    return this._viewportScale();
   }
 
   setupScrollListener() {
@@ -609,7 +627,8 @@ export class PDFViewer {
     // Place a zero-size marker at the rect's vertical center inside the page container
     const marker = document.createElement('div');
     marker.style.cssText = `position:absolute;left:0;pointer-events:none;width:0;height:0;`;
-    marker.style.top = `${rect.top * this.scale + (rect.height * this.scale) / 2}px`;
+    const coordinateScale = this._viewportScale();
+    marker.style.top = `${rect.top * coordinateScale + (rect.height * coordinateScale) / 2}px`;
     pageElements.container.appendChild(marker);
 
     // Compute the marker's absolute position within the scroll container
@@ -891,10 +910,10 @@ export class PDFViewer {
       }
 
       rects.push({
-        left: (left - pageRect.left) / this.scale,
-        top: (spanRect.top - pageRect.top) / this.scale,
-        width: (right - left) / this.scale,
-        height: spanRect.height / this.scale
+        left: (left - pageRect.left) / this._viewportScale(),
+        top: (spanRect.top - pageRect.top) / this._viewportScale(),
+        width: (right - left) / this._viewportScale(),
+        height: spanRect.height / this._viewportScale()
       });
     }
 
@@ -1008,10 +1027,10 @@ export class PDFViewer {
 
     for (const rect of annotation.highlight_rects) {
       ctx.fillRect(
-        rect.left * this.scale * pixelRatio,
-        rect.top * this.scale * pixelRatio,
-        rect.width * this.scale * pixelRatio,
-        rect.height * this.scale * pixelRatio
+        rect.left * this._viewportScale() * pixelRatio,
+        rect.top * this._viewportScale() * pixelRatio,
+        rect.width * this._viewportScale() * pixelRatio,
+        rect.height * this._viewportScale() * pixelRatio
       );
     }
   }
@@ -1028,10 +1047,10 @@ export class PDFViewer {
 
     for (const rect of highlight.highlight_rects) {
       ctx.fillRect(
-        rect.left * this.scale * pixelRatio,
-        rect.top * this.scale * pixelRatio,
-        rect.width * this.scale * pixelRatio,
-        rect.height * this.scale * pixelRatio
+        rect.left * this._viewportScale() * pixelRatio,
+        rect.top * this._viewportScale() * pixelRatio,
+        rect.width * this._viewportScale() * pixelRatio,
+        rect.height * this._viewportScale() * pixelRatio
       );
     }
   }
@@ -1121,6 +1140,178 @@ export class PDFViewer {
 
   clearSelection() {
     window.getSelection()?.removeAllRanges();
+  }
+
+  _ensureTextLayerSelectionSentinel(textLayerDiv) {
+    if (!textLayerDiv.querySelector('.endOfContent')) {
+      const endOfContent = document.createElement('div');
+      endOfContent.className = 'endOfContent';
+      textLayerDiv.appendChild(endOfContent);
+    }
+
+    if (textLayerDiv.dataset.selectionSentinelBound === 'true') return;
+
+    textLayerDiv.addEventListener('mousedown', () => {
+      textLayerDiv.classList.add('selecting');
+    });
+
+    if (!this.textLayerSelectionCleanupBound) {
+      document.addEventListener('mouseup', () => {
+        this.viewerElement
+          ?.querySelectorAll('.textLayer.selecting')
+          .forEach(layer => layer.classList.remove('selecting'));
+      });
+      this.textLayerSelectionCleanupBound = true;
+    }
+
+    textLayerDiv.dataset.selectionSentinelBound = 'true';
+  }
+
+  /**
+   * Find text in the rendered PDF text layers and return DOM-aligned rects.
+   * This avoids rebuilding PDF item coordinates by hand, which drifts from
+   * PDF.js for scaled, transformed, or fragmented text runs.
+   * @param {string} query
+   * @returns {Promise<Array<{pageNum: number, textIndex: number, text: string, rects: Array}>>}
+   */
+  async findText(query) {
+    const needle = (query || '').trim();
+    if (!needle || !this.pdf) return [];
+
+    const matches = [];
+    const needleLower = needle.toLowerCase();
+
+    for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
+      await this.renderPageIfNeeded(pageNum);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      const elements = this.pageElements.get(pageNum);
+      if (!elements?.textLayer) continue;
+
+      const pageRect = elements.container.getBoundingClientRect();
+      const textNodes = this._getTextLayerTextNodes(elements.textLayer);
+      if (textNodes.length === 0) continue;
+
+      let fullText = '';
+      const nodeMap = [];
+
+      for (const node of textNodes) {
+        const text = node.textContent || '';
+        if (!text) continue;
+
+        nodeMap.push({
+          node,
+          startOffset: fullText.length,
+          endOffset: fullText.length + text.length
+        });
+        fullText += text;
+      }
+
+      const fullTextLower = fullText.toLowerCase();
+      let startIndex = 0;
+
+      while (true) {
+        const index = fullTextLower.indexOf(needleLower, startIndex);
+        if (index === -1) break;
+
+        const rects = this._getTextRangeRectsFromNodes(
+          nodeMap,
+          index,
+          index + needle.length,
+          pageRect
+        );
+        const mergedRects = this.mergeRects(rects);
+
+        matches.push({
+          pageNum,
+          textIndex: index,
+          text: fullText.substring(index, index + needle.length),
+          rects: mergedRects
+        });
+
+        startIndex = index + 1;
+      }
+    }
+
+    return matches;
+  }
+
+  /**
+   * Get searchable text nodes from PDF.js presentation spans only.
+   * Skips UI overlays inserted into the text layer (search highlights, etc.).
+   */
+  _getTextLayerTextNodes(textLayer) {
+    const nodes = [];
+    const walker = document.createTreeWalker(
+      textLayer,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          const parentSpan = node.parentElement?.closest('span[role="presentation"]');
+          if (!parentSpan || !textLayer.contains(parentSpan)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.parentElement?.closest('.pdf-search-highlight')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+      }
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      nodes.push(node);
+    }
+
+    return nodes;
+  }
+
+  _getTextRangeRectsFromNodes(nodeMap, rangeStart, rangeEnd, pageRect) {
+    const rects = [];
+
+    for (const nodeInfo of nodeMap) {
+      if (nodeInfo.endOffset <= rangeStart) continue;
+      if (nodeInfo.startOffset >= rangeEnd) break;
+
+      const start = Math.max(0, rangeStart - nodeInfo.startOffset);
+      const end = Math.min(nodeInfo.node.textContent.length, rangeEnd - nodeInfo.startOffset);
+      if (end <= start) continue;
+
+      const subRange = document.createRange();
+      subRange.setStart(nodeInfo.node, start);
+      subRange.setEnd(nodeInfo.node, end);
+
+      const domRects = subRange.getClientRects();
+      if (domRects.length > 0) {
+        for (let i = 0; i < domRects.length; i++) {
+          const rect = domRects[i];
+          if (rect.width < 1 || rect.height < 1) continue;
+          rects.push(this._domRectToPageRect(rect, pageRect));
+        }
+      } else {
+        const parentSpan = nodeInfo.node.parentElement?.closest('span[role="presentation"]');
+        if (parentSpan) {
+          const spanRect = parentSpan.getBoundingClientRect();
+          if (spanRect.width >= 1 && spanRect.height >= 1) {
+            rects.push(this._domRectToPageRect(spanRect, pageRect));
+          }
+        }
+      }
+
+      subRange.detach?.();
+    }
+
+    return rects;
+  }
+
+  _domRectToPageRect(rect, pageRect) {
+    return {
+      left: (rect.left - pageRect.left) / this._viewportScale(),
+      top: (rect.top - pageRect.top) / this._viewportScale(),
+      width: rect.width / this._viewportScale(),
+      height: rect.height / this._viewportScale()
+    };
   }
 
   /**

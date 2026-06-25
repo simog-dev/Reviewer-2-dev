@@ -1,11 +1,11 @@
 import '../components/pdf-card.js';
 import { debounce } from './utils.js';
-import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.min.mjs';
+import * as pdfjsLib from '../../node_modules/pdfjs-dist/legacy/build/pdf.min.mjs';
 import ThemeManager from './theme-manager.js';
 
 // Initialize PDF.js worker
 const basePath = new URL('..', window.location.href).href;
-const workerSrc = `${basePath}node_modules/pdfjs-dist/build/pdf.worker.min.mjs`;
+const workerSrc = `${basePath}node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // Constants

@@ -151,10 +151,10 @@ export function parseReferenceEntry(text, number) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Remove the leading number if present (e.g., "[1]" or "1.")
+  // Remove the leading number if present (e.g., "[1]", "[ 1 ]", "1.", or "1 )")
   cleanText = cleanText
-    .replace(/^\[\d+\]\s*/, '')
-    .replace(/^\d+\.\s*/, '')
+    .replace(/^\[\s*\d+\s*\]\s*/, '')
+    .replace(/^\d+\s*[.)]\s*/, '')
     .replace(/^\d+\s+/, '');
 
   const doi = extractDOI(cleanText);
@@ -182,7 +182,309 @@ function findReferenceSectionStart(textItems) {
       }
     }
   }
+
+  // Some PDFs split section headings across multiple text items, e.g.
+  // "Refer" + "ences". Group nearby items into visual lines and retry.
+  const lineGroups = groupTextItemsIntoLines(textItems);
+  for (const line of lineGroups) {
+    const compactText = line.text.replace(/\s+/g, '').trim();
+    for (const pattern of REFERENCE_SECTION_PATTERNS) {
+      if (pattern.test(line.text.trim()) || pattern.test(compactText)) {
+        return line.startIndex;
+      }
+    }
+  }
+
   return -1;
+}
+
+/**
+ * Groups PDF.js text items into approximate visual lines.
+ * Keeps original item indices so callers can jump back into textContent.items.
+ * @param {Object[]} textItems
+ * @param {number} yTolerance
+ * @returns {Array<{startIndex: number, text: string}>}
+ */
+function groupTextItemsIntoLines(textItems, yTolerance = 3) {
+  const lines = [];
+
+  for (let i = 0; i < textItems.length; i++) {
+    const item = textItems[i];
+    const text = item.str || '';
+    if (!text.trim()) continue;
+
+    const y = item.transform ? item.transform[5] : null;
+    const x = item.transform ? item.transform[4] : 0;
+    let line = null;
+
+    if (y !== null) {
+      line = lines.find(candidate => Math.abs(candidate.y - y) <= yTolerance);
+    }
+
+    if (!line) {
+      line = { y, startIndex: i, parts: [] };
+      lines.push(line);
+    }
+
+    line.startIndex = Math.min(line.startIndex, i);
+    line.parts.push({ x, text });
+  }
+
+  return lines
+    .map(line => ({
+      startIndex: line.startIndex,
+      text: line.parts
+        .sort((a, b) => a.x - b.x)
+        .reduce((acc, part) => {
+          const trimmed = part.text.trim();
+          if (!trimmed) return acc;
+          return acc + (shouldAddSpace(acc, trimmed) ? ' ' : '') + trimmed;
+        }, '')
+    }))
+    .sort((a, b) => a.startIndex - b.startIndex);
+}
+
+function groupFlatItemsIntoLines(flatItems, yTolerance = 3) {
+  const lines = [];
+  let currentLine = null;
+
+  for (let itemIndex = 0; itemIndex < flatItems.length; itemIndex++) {
+    const entry = flatItems[itemIndex];
+    const text = entry.item.str || '';
+    if (!text.trim()) continue;
+
+    const y = entry.item.transform ? entry.item.transform[5] : null;
+    const x = entry.item.transform ? entry.item.transform[4] : 0;
+    const sameLine = currentLine &&
+      currentLine.pageNum === entry.pageNum &&
+      y !== null &&
+      currentLine.y !== null &&
+      Math.abs(currentLine.y - y) <= yTolerance;
+
+    if (!sameLine) {
+      currentLine = {
+        pageNum: entry.pageNum,
+        y,
+        startIndex: entry.globalIndex ?? entry.index ?? itemIndex,
+        endIndex: entry.globalIndex ?? entry.index ?? itemIndex,
+        minX: x,
+        parts: []
+      };
+      lines.push(currentLine);
+    }
+
+    currentLine.endIndex = entry.globalIndex ?? entry.index ?? itemIndex;
+    currentLine.minX = Math.min(currentLine.minX, x);
+    currentLine.parts.push({ x, text });
+  }
+
+  return lines.map(line => ({
+    pageNum: line.pageNum,
+    y: line.y,
+    startIndex: line.startIndex,
+    endIndex: line.endIndex,
+    minX: line.minX,
+    text: line.parts
+      .sort((a, b) => a.x - b.x)
+      .reduce((acc, part) => {
+        const trimmed = part.text.trim();
+        if (!trimmed) return acc;
+        return acc + (shouldAddSpace(acc, trimmed) ? ' ' : '') + trimmed;
+      }, '')
+  }));
+}
+
+/**
+ * Detects a reference entry number at a specific text item. This handles PDFs
+ * that split "[1]" or "1." across adjacent text items.
+ * @param {Array<{item: Object}>} flatItems
+ * @param {number} index
+ * @param {'bracket'|'dot'} refFormat
+ * @returns {{refNumber: number}|null}
+ */
+function getReferenceStartMatchAt(flatItems, index, refFormat) {
+  const currentText = flatItems[index]?.item?.str || '';
+  const trimmed = currentText.trim();
+
+  if (refFormat === 'bracket') {
+    const direct = trimmed.match(/^\[\s*(\d+)\s*\]/);
+    if (direct) {
+      return { refNumber: parseInt(direct[1], 10) };
+    }
+
+    let compact = '';
+    for (let i = index; i < Math.min(index + 5, flatItems.length); i++) {
+      compact += (flatItems[i].item.str || '').trim().replace(/\s+/g, '');
+      const split = compact.match(/^\[(\d{1,4})\]/);
+      if (split) {
+        return { refNumber: parseInt(split[1], 10) };
+      }
+      if (compact.length > 10) break;
+    }
+    return null;
+  }
+
+  const direct = trimmed.match(/^(\d+)\s*[.)](\s|$)/);
+  if (direct) {
+    return { refNumber: parseInt(direct[1], 10) };
+  }
+
+  let compact = '';
+  for (let i = index; i < Math.min(index + 4, flatItems.length); i++) {
+    compact += (flatItems[i].item.str || '').trim().replace(/\s+/g, '');
+    const split = compact.match(/^(\d{1,4})[.)]/);
+    if (split) {
+      return { refNumber: parseInt(split[1], 10) };
+    }
+    if (compact.length > 8) break;
+  }
+
+  return null;
+}
+
+function getReferenceStartMatchInText(text, refFormat) {
+  const trimmed = (text || '').trim();
+  if (refFormat === 'bracket') {
+    const match = trimmed.match(/^\[\s*(\d{1,4})\s*\]/);
+    return match ? { refNumber: parseInt(match[1], 10) } : null;
+  }
+
+  const match = trimmed.match(/^(\d{1,4})\s*[.)](\s|$)/);
+  return match ? { refNumber: parseInt(match[1], 10) } : null;
+}
+
+/**
+ * Determines whether references appear as [N] or N. entries.
+ * @param {Array<{item: Object}>} flatItems
+ * @returns {'bracket'|'dot'}
+ */
+function detectReferenceFormat(flatItems) {
+  const lines = groupFlatItemsIntoLines(flatItems);
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    if (getReferenceStartMatchInText(lines[i].text, 'bracket')) {
+      return 'bracket';
+    }
+    if (getReferenceStartMatchInText(lines[i].text, 'dot')) {
+      return 'dot';
+    }
+  }
+
+  for (let i = 0; i < Math.min(flatItems.length, 80); i++) {
+    const text = flatItems[i].item.str || '';
+    const trimmed = text.trim();
+    if (!trimmed || isLikelyMetadata(flatItems[i].item)) continue;
+
+    if (getReferenceStartMatchAt(flatItems, i, 'bracket')) {
+      return 'bracket';
+    }
+    if (getReferenceStartMatchAt(flatItems, i, 'dot')) {
+      return 'dot';
+    }
+  }
+
+  return 'bracket';
+}
+
+function extractReferencesFromLineGroups(flatItems, refFormat) {
+  const references = new Map();
+  const refPages = new Set();
+  const lines = groupFlatItemsIntoLines(flatItems);
+  const refLinePositions = [];
+  let numberingX = null;
+  let reachedEnd = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedText = line.text.trim();
+    if (!trimmedText) continue;
+
+    for (const endPattern of REFERENCE_SECTION_END_PATTERNS) {
+      if (endPattern.test(trimmedText)) {
+        reachedEnd = true;
+        break;
+      }
+    }
+    if (reachedEnd) break;
+
+    const match = getReferenceStartMatchInText(trimmedText, refFormat);
+    if (!match) continue;
+
+    const lastRefNumber = refLinePositions.length > 0
+      ? refLinePositions[refLinePositions.length - 1].refNumber
+      : 0;
+
+    if (refFormat === 'dot' && match.refNumber !== lastRefNumber + 1) {
+      continue;
+    }
+    if (refFormat === 'bracket' && lastRefNumber > 0 && match.refNumber <= lastRefNumber) {
+      continue;
+    }
+
+    if (numberingX !== null && Math.abs(line.minX - numberingX) > 30) {
+      continue;
+    }
+
+    if (numberingX === null) {
+      numberingX = line.minX;
+    } else {
+      numberingX = (numberingX * 0.8) + (line.minX * 0.2);
+    }
+
+    refLinePositions.push({
+      refNumber: match.refNumber,
+      lineIndex: i
+    });
+  }
+
+  if (refLinePositions.length === 0) {
+    return { references, refPages };
+  }
+
+  for (let i = 0; i < refLinePositions.length; i++) {
+    const current = refLinePositions[i];
+    const next = refLinePositions[i + 1];
+    const startLineIndex = current.lineIndex;
+    const endLineIndex = next ? next.lineIndex : lines.length;
+    let refText = '';
+    let startPage = null;
+    let endPage = null;
+
+    for (let j = startLineIndex; j < endLineIndex; j++) {
+      const line = lines[j];
+      const text = line.text.trim();
+      if (!text) continue;
+
+      let hitSectionEnd = false;
+      if (j > startLineIndex) {
+        for (const endPattern of REFERENCE_SECTION_END_PATTERNS) {
+          if (endPattern.test(text)) {
+            hitSectionEnd = true;
+            break;
+          }
+        }
+      }
+      if (hitSectionEnd) break;
+
+      if (startPage === null) startPage = line.pageNum;
+      endPage = line.pageNum;
+      refPages.add(line.pageNum);
+
+      if (shouldAddSpace(refText, text)) {
+        refText += ' ';
+      }
+      refText += text;
+    }
+
+    if (refText.trim()) {
+      const parsedRef = parseReferenceEntry(refText, current.refNumber);
+      parsedRef.startPage = startPage;
+      parsedRef.endPage = endPage;
+      parsedRef.spansMultiplePages = startPage !== endPage;
+      references.set(current.refNumber, parsedRef);
+    }
+  }
+
+  return { references, refPages };
 }
 
 /**
@@ -375,26 +677,29 @@ export async function extractReferencesFromPages(pdfDocument) {
     }
   }
 
-  // Detect reference numbering format by scanning the start of the references section.
-  // We look at the first items to see if references use [N] brackets or N. dot format.
-  // This must be done BEFORE the full pass to avoid matching inline citations [N]
-  // that appear inside reference text of dot-formatted lists.
-  let refPattern = /^\s*\[(\d+)\]/; // default: bracket format
-  let refFormat = 'bracket';
-  for (let i = 0; i < Math.min(flatItems.length, 50); i++) {
-    const text = flatItems[i].item.str;
-    const trimmed = text.trim();
-    if (!trimmed || isLikelyMetadata(flatItems[i].item)) continue;
-    if (/^\s*\[\d+\]/.test(text)) {
-      refPattern = /^\s*\[(\d+)\]/;
-      refFormat = 'bracket';
-      break;
+  // Detect reference numbering format by scanning the start of the references
+  // section. This must happen BEFORE the full pass to avoid matching inline
+  // citations [N] that appear inside dot-formatted reference text.
+  const refFormat = detectReferenceFormat(flatItems);
+
+  const lineBasedResult = extractReferencesFromLineGroups(flatItems, refFormat);
+  if (lineBasedResult.references.size > 0) {
+    const pageContentBands = new Map();
+    for (const { pageNum, items } of allTextContent) {
+      if (lineBasedResult.refPages.has(pageNum)) {
+        const band = computePageContentBand(items);
+        if (band) {
+          pageContentBands.set(pageNum, band);
+        }
+      }
     }
-    if (/^\s*\d+\.(\s|$)/.test(text)) {
-      refPattern = /^\s*(\d+)\.(\s|$)/;
-      refFormat = 'dot';
-      break;
-    }
+
+    return {
+      references: lineBasedResult.references,
+      pageContentBands,
+      refPages: lineBasedResult.refPages,
+      refFormat
+    };
   }
 
   // FIRST PASS: Find all reference number positions using the detected format
@@ -421,10 +726,10 @@ export async function extractReferencesFromPages(pdfDocument) {
     }
     if (reachedEnd) break;
 
-    // Check for reference number pattern
-    const refNumMatch = text.match(refPattern);
+    // Check for reference number pattern, including numbers split across items.
+    const refNumMatch = getReferenceStartMatchAt(flatItems, globalIndex, refFormat);
     if (refNumMatch) {
-      const refNumber = parseInt(refNumMatch[1], 10);
+      const refNumber = refNumMatch.refNumber;
 
       // For dot format (N.), enforce sequential numbering to avoid false positives
       // e.g., "pp 14-25." where "25." starts a new text item
@@ -609,23 +914,25 @@ function extractReferencesHeuristic(allTextContent) {
     }
   }
 
-  // Detect reference numbering format by scanning the first items
-  let refPattern = /^\s*\[(\d+)\]/; // default: bracket format
-  let refFormat = 'bracket';
-  for (let i = 0; i < Math.min(flatItems.length, 50); i++) {
-    const text = flatItems[i].item.str;
-    const trimmed = text.trim();
-    if (!trimmed || isLikelyMetadata(flatItems[i].item, false)) continue;
-    if (/^\s*\[\d+\]/.test(text)) {
-      refPattern = /^\s*\[(\d+)\]/;
-      refFormat = 'bracket';
-      break;
+  // Detect reference numbering format by scanning the first items.
+  const refFormat = detectReferenceFormat(flatItems);
+
+  const lineBasedResult = extractReferencesFromLineGroups(flatItems, refFormat);
+  if (lineBasedResult.references.size > 0) {
+    const pageContentBands = new Map();
+    for (const { pageNum, items } of lastPages) {
+      if (lineBasedResult.refPages.has(pageNum)) {
+        const band = computePageContentBand(items);
+        if (band) pageContentBands.set(pageNum, band);
+      }
     }
-    if (/^\s*\d+\.(\s|$)/.test(text)) {
-      refPattern = /^\s*(\d+)\.(\s|$)/;
-      refFormat = 'dot';
-      break;
-    }
+
+    return {
+      references: lineBasedResult.references,
+      pageContentBands,
+      refPages: lineBasedResult.refPages,
+      refFormat
+    };
   }
 
   // FIRST PASS: Find all reference number positions using the detected format
@@ -643,11 +950,11 @@ function extractReferencesHeuristic(allTextContent) {
       continue;
     }
 
-    // Look for numbered entries at the start
-    const refNumMatch = text.match(refPattern);
+    // Look for numbered entries at the start, including numbers split across items
+    const refNumMatch = getReferenceStartMatchAt(flatItems, i, refFormat);
 
     if (refNumMatch) {
-      const num = parseInt(refNumMatch[1], 10);
+      const num = refNumMatch.refNumber;
 
       // Only consider it a reference if it looks like a sequence
       if (refPositions.length === 0 || num === (refPositions[refPositions.length - 1]?.refNumber || 0) + 1) {

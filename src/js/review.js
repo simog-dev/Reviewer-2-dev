@@ -1185,86 +1185,98 @@ async function performPDFSearch(query) {
   searchMatches = [];
   currentSearchMatchIndex = -1;
 
-  const queryLower = query.toLowerCase();
+  let usedDomAlignedSearch = false;
 
-  // Search through all pages
-  for (let pageNum = 1; pageNum <= pdfViewer.totalPages; pageNum++) {
-    const page = pdfViewer.pages[pageNum - 1];
-    if (!page) continue;
-
+  if (typeof pdfViewer.findText === 'function') {
     try {
-      const textContent = await page.getTextContent();
-      const viewport = page.getViewport({ scale: 1 }); // Use scale=1 for normalized coordinates
+      searchMatches = await pdfViewer.findText(query);
+      usedDomAlignedSearch = true;
+    } catch (error) {
+      console.warn('DOM-aligned PDF search failed, falling back to PDF item coordinates:', error);
+    }
+  }
 
-      // Build full page text and track character positions
-      let fullText = '';
-      const charPositions = [];
+  if (!usedDomAlignedSearch) {
+    const queryLower = query.toLowerCase();
 
-      textContent.items.forEach((item, itemIndex) => {
-        const startPos = fullText.length;
-        fullText += item.str;
+    // Search through all pages
+    for (let pageNum = 1; pageNum <= pdfViewer.totalPages; pageNum++) {
+      const page = pdfViewer.pages[pageNum - 1];
+      if (!page) continue;
 
-        // Store position info for each character in this item
-        for (let i = 0; i < item.str.length; i++) {
-          charPositions.push({
-            itemIndex,
-            item,
-            charIndexInItem: i
-          });
-        }
+      try {
+        const textContent = await page.getTextContent();
+        const viewport = page.getViewport({ scale: 1 }); // Use scale=1 for normalized coordinates
 
-        // Add space between items
-        fullText += ' ';
-        charPositions.push(null); // space character
-      });
+        // Build full page text and track character positions
+        let fullText = '';
+        const charPositions = [];
 
-      const fullTextLower = fullText.toLowerCase();
+        textContent.items.forEach((item, itemIndex) => {
+          fullText += item.str;
 
-      // Find all matches in this page
-      let startIndex = 0;
-      while (true) {
-        const index = fullTextLower.indexOf(queryLower, startIndex);
-        if (index === -1) break;
+          // Store position info for each character in this item
+          for (let i = 0; i < item.str.length; i++) {
+            charPositions.push({
+              itemIndex,
+              item,
+              charIndexInItem: i
+            });
+          }
 
-        // Get bounding boxes for this match (in normalized coordinates, scale=1)
-        const rects = [];
-        for (let i = index; i < index + query.length && i < charPositions.length; i++) {
-          const charPos = charPositions[i];
-          if (!charPos) continue; // skip spaces
-
-          const item = charPos.item;
-          const tx = item.transform;
-
-          // Calculate character position (normalized, scale=1)
-          const charWidth = item.width / item.str.length;
-          const x = tx[4] + (charPos.charIndexInItem * charWidth);
-          const y = tx[5];
-          const width = charWidth;
-          const height = item.height || Math.abs(tx[3]);
-
-          // Store normalized coordinates (will be scaled during rendering)
-          rects.push({
-            left: x,
-            top: viewport.height - y - height,
-            width: width,
-            height: height
-          });
-        }
-
-        // Merge adjacent rects
-        const mergedRects = mergeSearchRects(rects);
-
-        searchMatches.push({
-          pageNum,
-          textIndex: index,
-          text: fullText.substr(index, query.length),
-          rects: mergedRects // Stored as normalized coordinates (scale=1)
+          // Add space between items
+          fullText += ' ';
+          charPositions.push(null); // space character
         });
 
-        startIndex = index + 1;
+        const fullTextLower = fullText.toLowerCase();
+
+        // Find all matches in this page
+        let startIndex = 0;
+        while (true) {
+          const index = fullTextLower.indexOf(queryLower, startIndex);
+          if (index === -1) break;
+
+          // Get bounding boxes for this match (in normalized coordinates, scale=1)
+          const rects = [];
+          for (let i = index; i < index + query.length && i < charPositions.length; i++) {
+            const charPos = charPositions[i];
+            if (!charPos) continue; // skip spaces
+
+            const item = charPos.item;
+            const tx = item.transform;
+
+            // Calculate character position (normalized, scale=1)
+            const charWidth = item.width / item.str.length;
+            const x = tx[4] + (charPos.charIndexInItem * charWidth);
+            const y = tx[5];
+            const width = charWidth;
+            const height = item.height || Math.abs(tx[3]);
+
+            // Store normalized coordinates (will be scaled during rendering)
+            rects.push({
+              left: x,
+              top: viewport.height - y - height,
+              width: width,
+              height: height
+            });
+          }
+
+          // Merge adjacent rects
+          const mergedRects = mergeSearchRects(rects);
+
+          searchMatches.push({
+            pageNum,
+            textIndex: index,
+            text: fullText.substr(index, query.length),
+            rects: mergedRects // Stored as normalized coordinates (scale=1)
+          });
+
+          startIndex = index + 1;
+        }
+      } catch (error) {
+        console.warn(`Failed to search page ${pageNum}:`, error);
       }
-    } catch (error) {
-      console.warn(`Failed to search page ${pageNum}:`, error);
     }
   }
 
@@ -1376,7 +1388,9 @@ function renderSearchHighlights() {
           highlightDiv.classList.add('current');
         }
 
-        const scale = pdfViewer.scale;
+        const scale = typeof pdfViewer.getCoordinateScale === 'function'
+          ? pdfViewer.getCoordinateScale()
+          : pdfViewer.scale;
         const horizontalPadding = 3; // 3px padding on each side
         const verticalPadding = 1;   // 1px padding top/bottom
 
