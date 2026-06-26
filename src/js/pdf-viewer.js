@@ -1189,39 +1189,70 @@ export class PDFViewer {
   mergeRects(rects) {
     if (rects.length === 0) return [];
 
-    // Sort by top then left
-    rects.sort((a, b) => a.top - b.top || a.left - b.left);
-
     const merged = [];
-    let current = { ...rects[0] };
+    const lines = [];
 
-    for (let i = 1; i < rects.length; i++) {
-      const rect = rects[i];
+    for (const rect of [...rects].sort((a, b) => a.top - b.top || a.left - b.left)) {
+      const line = lines.find(candidate => this._rectsBelongToSameTextLine(candidate.bounds, rect));
 
-      // Check if rects are on the same line and adjacent.
-      // Use a tolerance proportional to height to handle superscript/subscript
-      // characters that have a different vertical offset on the same line.
-      const lineHeight = Math.max(current.height, rect.height);
-      const verticalTolerance = Math.max(5, lineHeight * 0.6);
-      const verticallyAligned = Math.abs(rect.top - current.top) < verticalTolerance ||
-        // Also check vertical overlap (rects share vertical space)
-        (rect.top < current.top + current.height && rect.top + rect.height > current.top);
-
-      if (verticallyAligned && rect.left <= current.left + current.width + 5) {
-        // Merge: extend to cover both rects
-        const newTop = Math.min(current.top, rect.top);
-        const newBottom = Math.max(current.top + current.height, rect.top + rect.height);
-        current.top = newTop;
-        current.width = Math.max(current.left + current.width, rect.left + rect.width) - current.left;
-        current.height = newBottom - newTop;
+      if (line) {
+        line.rects.push(rect);
+        line.bounds = this._unionRects(line.bounds, rect);
       } else {
-        merged.push(current);
-        current = { ...rect };
+        lines.push({ bounds: { ...rect }, rects: [rect] });
       }
     }
-    merged.push(current);
+
+    lines.sort((a, b) => a.bounds.top - b.bounds.top || a.bounds.left - b.bounds.left);
+
+    for (const line of lines) {
+      const sortedLineRects = line.rects.sort((a, b) => a.left - b.left || a.top - b.top);
+      let current = { ...sortedLineRects[0] };
+
+      for (let i = 1; i < sortedLineRects.length; i++) {
+        const rect = sortedLineRects[i];
+        const maxGap = this._maxMergeGap(current, rect);
+
+        if (rect.left <= current.left + current.width + maxGap) {
+          current = this._unionRects(current, rect);
+        } else {
+          merged.push(current);
+          current = { ...rect };
+        }
+      }
+
+      merged.push(current);
+    }
 
     return merged;
+  }
+
+  _rectsBelongToSameTextLine(a, b) {
+    const lineHeight = Math.max(a.height, b.height);
+    const verticalTolerance = Math.max(5, lineHeight);
+    const centersClose = Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= verticalTolerance;
+    const overlap = a.top < b.top + b.height && a.top + a.height > b.top;
+
+    return centersClose || overlap;
+  }
+
+  _maxMergeGap(a, b) {
+    const lineHeight = Math.max(a.height, b.height);
+    return Math.min(2, Math.max(0.5, lineHeight * 0.25));
+  }
+
+  _unionRects(a, b) {
+    const left = Math.min(a.left, b.left);
+    const top = Math.min(a.top, b.top);
+    const right = Math.max(a.left + a.width, b.left + b.width);
+    const bottom = Math.max(a.top + a.height, b.top + b.height);
+
+    return {
+      left,
+      top,
+      width: right - left,
+      height: bottom - top
+    };
   }
 
   setHighlightMode(enabled) {
