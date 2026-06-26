@@ -16,6 +16,7 @@ async function initPdfJs() {
 // Pages within this many viewport heights of the visible area are pre-rendered
 const RENDER_BUFFER_VIEWPORTS = 2;
 const PDF_TO_CSS_UNITS = pdfjsLib.PixelsPerInch?.PDF_TO_CSS_UNITS || (96 / 72);
+const HIGHLIGHT_HIT_TOLERANCE = 2;
 
 // Category highlight colors (rgba with alpha for fill)
 const CATEGORY_COLORS = {
@@ -60,6 +61,7 @@ export class PDFViewer {
     this.refPages = new Set();          // pages that contain reference entries
     this.refFormat = 'bracket';         // 'bracket' ([N]) or 'dot' (N.)
     this.textLayerSelectionCleanupBound = false;
+    this.selectionDragStart = null;
 
     this.init();
   }
@@ -187,8 +189,7 @@ export class PDFViewer {
         // First check for annotations
         const hitAnnotation = this.annotations.find(ann => {
           return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
-            clickX >= rect.left && clickX <= rect.left + rect.width &&
-            clickY >= rect.top && clickY <= rect.top + rect.height
+            this._rectContainsPoint(rect, clickX, clickY)
           );
         });
 
@@ -201,8 +202,7 @@ export class PDFViewer {
         // Then check for simple highlights
         const hitHighlight = this.highlights.find(hl => {
           return this._getHighlightRectsForPage(hl, pageNumber).some(rect =>
-            clickX >= rect.left && clickX <= rect.left + rect.width &&
-            clickY >= rect.top && clickY <= rect.top + rect.height
+            this._rectContainsPoint(rect, clickX, clickY)
           );
         });
 
@@ -222,8 +222,7 @@ export class PDFViewer {
 
         const hitAnnotation = this.annotations.find(ann => {
           return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
-            clickX >= rect.left && clickX <= rect.left + rect.width &&
-            clickY >= rect.top && clickY <= rect.top + rect.height
+            this._rectContainsPoint(rect, clickX, clickY)
           );
         });
 
@@ -249,16 +248,14 @@ export class PDFViewer {
         // Check annotations
         const overAnnotation = this.annotations.some(ann => {
           return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
-            mx >= rect.left && mx <= rect.left + rect.width &&
-            my >= rect.top && my <= rect.top + rect.height
+            this._rectContainsPoint(rect, mx, my)
           );
         });
 
         // Check simple highlights
         const overSimpleHighlight = this.highlights.some(hl => {
           return this._getHighlightRectsForPage(hl, pageNumber).some(rect =>
-            mx >= rect.left && mx <= rect.left + rect.width &&
-            my >= rect.top && my <= rect.top + rect.height
+            this._rectContainsPoint(rect, mx, my)
           );
         });
 
@@ -639,6 +636,22 @@ export class PDFViewer {
   }
 
   setupSelectionListener() {
+    document.addEventListener('mousedown', (e) => {
+      const textLayer = e.target.closest?.('.textLayer');
+      const pageContainer = textLayer?.closest('.pdf-page');
+
+      if (!textLayer || !pageContainer || !this.viewerElement.contains(textLayer)) {
+        this.selectionDragStart = null;
+        return;
+      }
+
+      this.selectionDragStart = {
+        pageNumber: parseInt(pageContainer.dataset.pageNumber, 10),
+        clientX: e.clientX,
+        clientY: e.clientY
+      };
+    });
+
     document.addEventListener('mouseup', (e) => {
       // HIGHLIGHT MODE: Uncomment the line below to require highlight mode to be enabled
       // if (!this.highlightModeEnabled) return;
@@ -671,20 +684,32 @@ export class PDFViewer {
       if (!startPageContainer) return;
 
       const pageNumber = parseInt(startPageContainer.dataset.pageNumber, 10);
-      const selectedText = selection.toString().trim();
+      const rawSelectedText = selection.toString().trim();
 
-      if (!selectedText) return;
+      if (!rawSelectedText) return;
 
       const selectedPages = this._getSelectionRectsByPage(range);
       if (selectedPages.length === 0) return;
 
       const isMultiPageSelection = selectedPages.length > 1;
-      const mergedRects = selectedPages.flatMap(({ pageNumber: rectPageNumber, rects }) => {
+      const boundedPages = isMultiPageSelection
+        ? this._applyDragBoundsToSelectedPages(selectedPages, e)
+        : selectedPages;
+
+      const mergedRects = boundedPages.flatMap(({ pageNumber: rectPageNumber, rects }) => {
         return this.mergeRects(rects).map(rect => (
           isMultiPageSelection ? { ...rect, pageNumber: rectPageNumber } : rect
         ));
       });
       if (mergedRects.length === 0) return;
+
+      if (isMultiPageSelection) {
+        this._replaceSelectionWithBoundedRange(selection, range, boundedPages);
+      }
+
+      const selectedText = isMultiPageSelection
+        ? this._getSelectedTextFromBoundedPages(range, boundedPages) || rawSelectedText
+        : rawSelectedText;
 
       this.onTextSelected({
         pageNumber,
@@ -721,6 +746,222 @@ export class PDFViewer {
     });
 
     return pages.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+
+  _applyDragBoundsToSelectedPages(selectedPages, mouseUpEvent) {
+    if (!this.selectionDragStart || selectedPages.length <= 1) {
+      return selectedPages;
+    }
+
+    const start = this._pointToPageCoordinates(
+      this.selectionDragStart.pageNumber,
+      this.selectionDragStart.clientX,
+      this.selectionDragStart.clientY
+    );
+    const endPageNumber = this._getPageNumberAtPoint(mouseUpEvent.clientX, mouseUpEvent.clientY) ||
+      selectedPages[selectedPages.length - 1].pageNumber;
+    const end = this._pointToPageCoordinates(endPageNumber, mouseUpEvent.clientX, mouseUpEvent.clientY);
+
+    if (!start || !end) {
+      return selectedPages;
+    }
+
+    const firstSelectedPage = selectedPages[0].pageNumber;
+    const lastSelectedPage = selectedPages[selectedPages.length - 1].pageNumber;
+    const forward = start.pageNumber <= end.pageNumber;
+    const tolerance = 4;
+
+    return selectedPages
+      .map(({ pageNumber, rects }) => {
+        let minTop = -Infinity;
+        let maxBottom = Infinity;
+
+        if (forward) {
+          if (pageNumber === start.pageNumber) minTop = start.y - tolerance;
+          if (pageNumber === end.pageNumber) maxBottom = end.y + tolerance;
+        } else {
+          if (pageNumber === end.pageNumber) minTop = end.y - tolerance;
+          if (pageNumber === start.pageNumber) maxBottom = start.y + tolerance;
+        }
+
+        // Fallback for cases where mouseup lands just outside the page while the
+        // browser selection still spans the expected first/last selected pages.
+        if (forward && end.pageNumber !== lastSelectedPage && pageNumber === lastSelectedPage) {
+          maxBottom = Infinity;
+        } else if (!forward && end.pageNumber !== firstSelectedPage && pageNumber === firstSelectedPage) {
+          minTop = -Infinity;
+        }
+
+        const boundedRects = rects.filter(rect => {
+          const rectBottom = rect.top + rect.height;
+          return rectBottom >= minTop && rect.top <= maxBottom;
+        });
+
+        return { pageNumber, rects: boundedRects };
+      })
+      .filter(({ rects }) => rects.length > 0);
+  }
+
+  _pointToPageCoordinates(pageNumber, clientX, clientY) {
+    const elements = this.pageElements.get(pageNumber);
+    if (!elements) return null;
+
+    const pageRect = elements.container.getBoundingClientRect();
+    return {
+      pageNumber,
+      x: (clientX - pageRect.left) / this._viewportScale(),
+      y: (clientY - pageRect.top) / this._viewportScale()
+    };
+  }
+
+  _getPageNumberAtPoint(clientX, clientY) {
+    for (const [pageNumber, elements] of this.pageElements) {
+      const rect = elements.container.getBoundingClientRect();
+      if (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      ) {
+        return pageNumber;
+      }
+    }
+
+    return null;
+  }
+
+  _getSelectedTextFromBoundedPages(range, boundedPages) {
+    const textPartsByPage = [];
+
+    for (const { pageNumber, rects } of boundedPages) {
+      const elements = this.pageElements.get(pageNumber);
+      if (!elements?.textLayer || rects.length === 0) continue;
+
+      const pageRect = elements.container.getBoundingClientRect();
+      const textParts = [];
+      const textSpans = Array.from(elements.textLayer.querySelectorAll('span[role="presentation"]'));
+
+      for (const span of textSpans) {
+        if (!range.intersectsNode(span)) continue;
+
+        const spanRect = span.getBoundingClientRect();
+        const spanPageRect = {
+          left: (spanRect.left - pageRect.left) / this._viewportScale(),
+          top: (spanRect.top - pageRect.top) / this._viewportScale(),
+          width: spanRect.width / this._viewportScale(),
+          height: spanRect.height / this._viewportScale()
+        };
+
+        if (!rects.some(rect => this._rectsOverlap(spanPageRect, rect))) continue;
+
+        const textNode = span.firstChild;
+        if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+
+        let startOffset = 0;
+        let endOffset = textNode.textContent.length;
+
+        if (span.contains(range.startContainer)) {
+          startOffset = range.startOffset;
+        }
+        if (span.contains(range.endContainer)) {
+          endOffset = range.endOffset;
+        }
+        if (startOffset >= endOffset) continue;
+
+        textParts.push(textNode.textContent.slice(startOffset, endOffset));
+      }
+
+      const pageText = textParts.join('').trim();
+      if (pageText) {
+        textPartsByPage.push(pageText);
+      }
+    }
+
+    return textPartsByPage.join('\n').trim();
+  }
+
+  _replaceSelectionWithBoundedRange(selection, sourceRange, boundedPages) {
+    const endpoints = this._getBoundedRangeEndpoints(sourceRange, boundedPages);
+    if (!endpoints) return;
+
+    const boundedRange = document.createRange();
+    boundedRange.setStart(endpoints.startNode, endpoints.startOffset);
+    boundedRange.setEnd(endpoints.endNode, endpoints.endOffset);
+
+    selection.removeAllRanges();
+    selection.addRange(boundedRange);
+  }
+
+  _getBoundedRangeEndpoints(range, boundedPages) {
+    let first = null;
+    let last = null;
+
+    for (const { pageNumber, rects } of boundedPages) {
+      const elements = this.pageElements.get(pageNumber);
+      if (!elements?.textLayer || rects.length === 0) continue;
+
+      const pageRect = elements.container.getBoundingClientRect();
+      const textSpans = Array.from(elements.textLayer.querySelectorAll('span[role="presentation"]'));
+
+      for (const span of textSpans) {
+        if (!range.intersectsNode(span)) continue;
+
+        const spanRect = span.getBoundingClientRect();
+        const spanPageRect = {
+          left: (spanRect.left - pageRect.left) / this._viewportScale(),
+          top: (spanRect.top - pageRect.top) / this._viewportScale(),
+          width: spanRect.width / this._viewportScale(),
+          height: spanRect.height / this._viewportScale()
+        };
+
+        if (!rects.some(rect => this._rectsOverlap(spanPageRect, rect))) continue;
+
+        const textNode = span.firstChild;
+        if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+
+        let startOffset = 0;
+        let endOffset = textNode.textContent.length;
+
+        if (span.contains(range.startContainer)) {
+          startOffset = range.startOffset;
+        }
+        if (span.contains(range.endContainer)) {
+          endOffset = range.endOffset;
+        }
+        if (startOffset >= endOffset) continue;
+
+        const endpoint = { startNode: textNode, startOffset, endNode: textNode, endOffset };
+        if (!first) first = endpoint;
+        last = endpoint;
+      }
+    }
+
+    if (!first || !last) return null;
+
+    return {
+      startNode: first.startNode,
+      startOffset: first.startOffset,
+      endNode: last.endNode,
+      endOffset: last.endOffset
+    };
+  }
+
+  _rectsOverlap(a, b) {
+    return (
+      a.left < b.left + b.width &&
+      a.left + a.width > b.left &&
+      a.top < b.top + b.height &&
+      a.top + a.height > b.top
+    );
+  }
+
+  _rectContainsPoint(rect, x, y, tolerance = HIGHLIGHT_HIT_TOLERANCE) {
+    return (
+      x >= rect.left - tolerance &&
+      x <= rect.left + rect.width + tolerance &&
+      y >= rect.top - tolerance &&
+      y <= rect.top + rect.height + tolerance
+    );
   }
 
   // Expand selection range to include complete words at boundaries
@@ -1034,7 +1275,7 @@ export class PDFViewer {
     }
 
     return item.highlight_rects.filter(rect => {
-      const rectPageNumber = rect.pageNumber || rect.page_number || item.page_number;
+      const rectPageNumber = Number(rect.pageNumber || rect.page_number || item.page_number);
       return rectPageNumber === pageNumber;
     });
   }

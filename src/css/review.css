@@ -392,8 +392,8 @@
 }
 
 .textLayer.over-highlight,
-.textLayer.over-highlight span {
-  cursor: pointer;
+.textLayer.over-highlight * {
+  cursor: pointer !important;
 }
 
 .textLayer .highlight {
