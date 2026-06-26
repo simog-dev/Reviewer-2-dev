@@ -369,6 +369,26 @@ ipcMain.handle('export:saveFile', async (event, { defaultName, filters, content 
   }
 });
 
+ipcMain.handle('import:openFile', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+  });
+
+  if (result.canceled) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const filePath = result.filePaths[0];
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { success: true, filePath, content };
+  } catch (error) {
+    console.error('Error reading import file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Settings/Preferences
 ipcMain.handle('settings:get', async (event, key) => {
   return db.getSetting(key);

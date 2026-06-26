@@ -66,6 +66,16 @@
           </svg>
         </button>
 
+        <!-- Thumbnail Sidebar Toggle -->
+        <button class="btn btn-secondary btn-thumbnails" id="btn-thumbnails" title="Page Thumbnails (T)" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="3" width="6" height="8" rx="1"/>
+            <rect x="14" y="3" width="6" height="8" rx="1"/>
+            <rect x="4" y="13" width="6" height="8" rx="1"/>
+            <rect x="14" y="13" width="6" height="8" rx="1"/>
+          </svg>
+        </button>
+
         <!-- Highlight Mode Toggle -->
         <button class="btn btn-secondary btn-highlight" id="btn-highlight" title="Highlight Mode (H)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,6 +101,15 @@
         </button>
 
         <!-- Export Button -->
+        <button class="btn btn-secondary btn-import" id="btn-import" title="Import Annotations">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import
+        </button>
+
         <div style="position: relative;">
           <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -148,14 +167,20 @@
           </button>
         </div>
 
-        <div class="pdf-viewer-container" id="pdf-viewer-container">
-          <!-- Loading State -->
-          <div class="pdf-loading" id="pdf-loading">
-            <div class="spinner spinner-lg"></div>
-            <span class="loading-text">Loading PDF...</span>
+        <div class="pdf-workspace" id="pdf-workspace">
+          <aside class="pdf-thumbnail-sidebar" id="pdf-thumbnail-sidebar" aria-label="PDF page thumbnails">
+            <div class="pdf-thumbnail-list" id="pdf-thumbnail-list"></div>
+          </aside>
+
+          <div class="pdf-viewer-container" id="pdf-viewer-container">
+            <!-- Loading State -->
+            <div class="pdf-loading" id="pdf-loading">
+              <div class="spinner spinner-lg"></div>
+              <span class="loading-text">Loading PDF...</span>
+            </div>
+            <!-- PDF Pages Container -->
+            <div class="pdf-viewer" id="pdf-viewer"></div>
           </div>
-          <!-- PDF Pages Container -->
-          <div class="pdf-viewer" id="pdf-viewer"></div>
         </div>
       </div>
 
@@ -421,6 +446,28 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pdf-not-found-back">Go Back</button>
         <button class="btn btn-primary" id="pdf-not-found-reload">Select New File</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Compatibility Modal -->
+  <div class="modal-overlay" id="import-compatibility-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Import Annotations</h3>
+        <button class="modal-close" id="import-compatibility-modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="import-compatibility-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="import-compatibility-cancel">Cancel</button>
+        <button class="btn btn-primary" id="import-compatibility-confirm">Import Anyway</button>
       </div>
     </div>
   </div>

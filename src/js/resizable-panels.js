@@ -142,7 +142,7 @@ export class ResizablePanels {
   }
 
   _updatePanelOverflow(panel, visibleWidth) {
-    const content = panel.querySelector('.pdf-viewer-container, .annotation-panel-content, .search-panel-content');
+    const content = panel.querySelector('.pdf-workspace, .pdf-viewer-container, .annotation-panel-content, .search-panel-content');
     if (visibleWidth <= LABEL_THRESHOLD) {
       panel.style.overflowX = 'hidden';
       panel.classList.remove('narrow-scroll');

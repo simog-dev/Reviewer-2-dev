@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Export Operations
   saveFile: (options) => ipcRenderer.invoke('export:saveFile', options),
+  openImportFile: () => ipcRenderer.invoke('import:openFile'),
 
   // Settings
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),

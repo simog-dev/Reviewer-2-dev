@@ -35,11 +35,15 @@ const zoomSelect = document.getElementById('zoom-select');
 const btnZoomIn = document.getElementById('btn-zoom-in');
 const btnZoomOut = document.getElementById('btn-zoom-out');
 const btnHighlight = document.getElementById('btn-highlight');
+const btnThumbnails = document.getElementById('btn-thumbnails');
+const pdfWorkspace = document.getElementById('pdf-workspace');
+const pdfThumbnailList = document.getElementById('pdf-thumbnail-list');
 const btnBack = document.getElementById('btn-back');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const sortSelect = document.getElementById('sort-select');
 const btnExport = document.getElementById('btn-export');
 const exportMenu = document.getElementById('export-menu');
+const btnImport = document.getElementById('btn-import');
 
 const annotationList = document.getElementById('annotation-list');
 const annotationListEmpty = document.getElementById('annotation-list-empty');
@@ -85,6 +89,13 @@ const deleteAnnotationModalClose = document.getElementById('delete-annotation-mo
 const deleteAnnotationModalCancel = document.getElementById('delete-annotation-modal-cancel');
 const deleteAnnotationModalConfirm = document.getElementById('delete-annotation-modal-confirm');
 let pendingDeleteAnnotationId = null;
+
+const importCompatibilityModal = document.getElementById('import-compatibility-modal');
+const importCompatibilityModalClose = document.getElementById('import-compatibility-modal-close');
+const importCompatibilityMessage = document.getElementById('import-compatibility-message');
+const importCompatibilityCancel = document.getElementById('import-compatibility-cancel');
+const importCompatibilityConfirm = document.getElementById('import-compatibility-confirm');
+let pendingImportData = null;
 
 const pdfNotFoundModal = document.getElementById('pdf-not-found-modal');
 const pdfNotFoundPath = document.getElementById('pdf-not-found-path');
@@ -188,6 +199,7 @@ async function loadPDF() {
 
     pdfTitle.textContent = pdfData.name;
     pdfTitle.title = pdfData.path;
+    annotationManager.setPDFMetadata(pdfData);
 
     // Update last opened
     await window.api.updatePDF(pdfId, { lastOpenedAt: new Date().toISOString() });
@@ -199,6 +211,7 @@ async function loadPDF() {
     pdfViewer = new PDFViewer(pdfViewerContainer, {
       onPageChange: (page) => {
         currentPageEl.textContent = page;
+        pdfViewer?.setActiveThumbnail(page);
       },
       onTextSelected: handleTextSelected,
       onHighlightClick: handleHighlightClick,
@@ -209,6 +222,8 @@ async function loadPDF() {
 
     const totalPages = await pdfViewer.load(fileData);
     totalPagesEl.textContent = totalPages;
+    pdfViewer.setThumbnailContainer(pdfThumbnailList);
+    await restoreThumbnailSidebarPreference();
 
     // Update completion button state
     updateCompletionButton();
@@ -228,6 +243,28 @@ async function loadPDF() {
     }
     return false;
   }
+}
+
+async function restoreThumbnailSidebarPreference() {
+  const savedValue = await window.api.getSetting('thumbnailSidebarVisible');
+  setThumbnailSidebarVisible(savedValue === true);
+}
+
+function setThumbnailSidebarVisible(visible) {
+  pdfWorkspace.classList.toggle('show-thumbnails', visible);
+  btnThumbnails.classList.toggle('active', visible);
+  btnThumbnails.setAttribute('aria-pressed', String(visible));
+
+  if (visible) {
+    pdfViewer?.setActiveThumbnail(pdfViewer.currentPage);
+    requestAnimationFrame(() => pdfViewer?.renderVisibleThumbnails());
+  }
+}
+
+function toggleThumbnailSidebar() {
+  const visible = !pdfWorkspace.classList.contains('show-thumbnails');
+  setThumbnailSidebarVisible(visible);
+  window.api.setSetting('thumbnailSidebarVisible', visible).catch(() => {});
 }
 
 // Load annotations
@@ -974,6 +1011,166 @@ async function exportAnnotations(format) {
   }
 }
 
+async function importAnnotations() {
+  try {
+    const result = await window.api.openImportFile();
+    if (!result || result.canceled) return;
+    if (!result.success) {
+      showToast('Import file could not be opened', 'error');
+      return;
+    }
+
+    let importData;
+    try {
+      importData = JSON.parse(result.content);
+    } catch {
+      showToast('Import file is not valid JSON', 'error');
+      return;
+    }
+
+    const compatibility = checkImportCompatibility(importData);
+    if (compatibility.requiresConfirmation) {
+      pendingImportData = importData;
+      showImportCompatibilityModal(compatibility.message);
+      return;
+    }
+
+    await performImport(importData);
+  } catch (error) {
+    console.error('Import error:', error);
+    showToast('Import failed: ' + error.message, 'error');
+  }
+}
+
+function checkImportCompatibility(importData) {
+  const importedPdf = importData?.pdf;
+
+  if (!importedPdf) {
+    return {
+      requiresConfirmation: true,
+      message: 'This JSON file does not include PDF metadata, so Reviewer cannot verify that these annotations belong to the current PDF. You can still try the import, then confirm or undo it.'
+    };
+  }
+
+  const importedPageCount = Number(importedPdf.pageCount ?? importedPdf.page_count);
+  const currentPageCount = Number(pdfData.page_count || pdfViewer?.totalPages || 0);
+  const importedName = String(importedPdf.name || '').trim();
+  const currentName = String(pdfData.name || '').trim();
+  const issues = [];
+
+  if (importedPageCount && currentPageCount && importedPageCount !== currentPageCount) {
+    issues.push(`page count differs (${importedPageCount} in the file, ${currentPageCount} in the current PDF)`);
+  }
+
+  if (importedName && currentName && importedName !== currentName) {
+    issues.push(`PDF name differs ("${importedName}" vs "${currentName}")`);
+  }
+
+  const highestImportedPage = getHighestImportedPage(importData);
+  if (highestImportedPage && currentPageCount && highestImportedPage > currentPageCount) {
+    issues.push(`import contains page ${highestImportedPage}, but the current PDF has ${currentPageCount} pages`);
+  }
+
+  if (issues.length > 0) {
+    return {
+      requiresConfirmation: true,
+      message: `This import may belong to a different PDF: ${issues.join('; ')}. You can still try the import, then confirm or undo it.`
+    };
+  }
+
+  if (!importedPageCount && !importedName) {
+    return {
+      requiresConfirmation: true,
+      message: 'The import metadata is incomplete, so Reviewer cannot verify that these annotations belong to the current PDF. You can still try the import, then confirm or undo it.'
+    };
+  }
+
+  return { requiresConfirmation: false };
+}
+
+function getHighestImportedPage(importData) {
+  const importedItems = [
+    ...(Array.isArray(importData?.annotations) ? importData.annotations : []),
+    ...(Array.isArray(importData?.highlights) ? importData.highlights : [])
+  ];
+
+  return importedItems.reduce((highest, item) => {
+    const pageNumber = Number(item.pageNumber ?? item.page_number);
+    return Number.isFinite(pageNumber) ? Math.max(highest, pageNumber) : highest;
+  }, 0);
+}
+
+function showImportCompatibilityModal(message) {
+  importCompatibilityMessage.textContent = message;
+  importCompatibilityModal.classList.add('active');
+}
+
+function hideImportCompatibilityModal() {
+  importCompatibilityModal.classList.remove('active');
+  importCompatibilityMessage.textContent = '';
+  pendingImportData = null;
+}
+
+async function confirmCompatibilityImport() {
+  const importData = pendingImportData;
+  hideImportCompatibilityModal();
+  if (importData) {
+    await performImport(importData);
+  }
+}
+
+async function performImport(importData) {
+  const result = await annotationManager.importFromJSON(importData, { notify: false });
+  await loadCategories();
+  highlights = await window.api.getHighlightsForPDF(pdfId);
+  pdfViewer.setHighlights(highlights);
+  pdfViewer.setAnnotations(annotationManager.annotations);
+  renderCategoryFilters();
+  renderAnnotationList(annotationManager.getFilteredAndSorted());
+  updateAnnotationCount();
+  updateCategoryFilterCounts();
+
+  const importedCount = result.annotations.length + result.highlights.length;
+  showImportConfirmationToast(result, `${importedCount} item${importedCount === 1 ? '' : 's'} imported`);
+}
+
+function showImportConfirmationToast(importResult, message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-success';
+  toast.innerHTML = `
+    <span class="toast-message">${escapeHtml(message)}</span>
+    <div class="toast-actions">
+      <button class="toast-action" data-action="confirm">Confirm</button>
+      <button class="toast-action" data-action="undo">Undo</button>
+    </div>
+  `;
+
+  toastContainer.appendChild(toast);
+
+  toast.addEventListener('click', async (e) => {
+    const actionButton = e.target.closest('.toast-action');
+    if (!actionButton) return;
+
+    if (actionButton.dataset.action === 'undo') {
+      await annotationManager.rollbackImport(importResult.annotations, importResult.highlights, importResult.categories);
+      await loadCategories();
+      highlights = await window.api.getHighlightsForPDF(pdfId);
+      pdfViewer.setHighlights(highlights);
+      pdfViewer.setAnnotations(annotationManager.annotations);
+      renderCategoryFilters();
+      renderAnnotationList(annotationManager.getFilteredAndSorted());
+      updateAnnotationCount();
+      updateCategoryFilterCounts();
+      toast.remove();
+      showToast('Import undone', 'success');
+      return;
+    }
+
+    toast.remove();
+    showToast('Import confirmed', 'success');
+  });
+}
+
 // Check if LLM is configured (API key set)
 async function checkLLMReady() {
   const apiKey = await window.api.getSetting('llm_api_key');
@@ -1515,6 +1712,8 @@ function setupEventListeners() {
     pdfViewer.setDualPageMode(btnDualPage.classList.contains('active'));
   });
 
+  btnThumbnails.addEventListener('click', toggleThumbnailSidebar);
+
   // Highlight mode
   // HIGHLIGHT MODE: Uncomment to re-enable highlight mode toggle
   // btnHighlight.addEventListener('click', toggleHighlightMode);
@@ -1568,6 +1767,7 @@ function setupEventListeners() {
 
   // Export
   btnExport.addEventListener('click', toggleExportMenu);
+  btnImport.addEventListener('click', importAnnotations);
 
   exportMenu.querySelectorAll('.export-menu-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -1700,6 +1900,14 @@ function setupEventListeners() {
   deleteAnnotationModalConfirm.addEventListener('click', confirmDeleteAnnotation);
   deleteAnnotationModal.addEventListener('click', (e) => {
     if (e.target === deleteAnnotationModal) hideDeleteAnnotationModal();
+  });
+
+  // Import compatibility modal
+  importCompatibilityModalClose.addEventListener('click', hideImportCompatibilityModal);
+  importCompatibilityCancel.addEventListener('click', hideImportCompatibilityModal);
+  importCompatibilityConfirm.addEventListener('click', confirmCompatibilityImport);
+  importCompatibilityModal.addEventListener('click', (e) => {
+    if (e.target === importCompatibilityModal) hideImportCompatibilityModal();
   });
 
   // PDF Not Found modal
@@ -2098,6 +2306,12 @@ function setupKeyboardShortcuts() {
       btnDualPage.click();
     }
 
+    // T: Toggle page thumbnails
+    if (e.key === 't' || e.key === 'T') {
+      e.preventDefault();
+      toggleThumbnailSidebar();
+    }
+
     // H: Toggle highlight mode
     // HIGHLIGHT MODE: Uncomment to re-enable highlight mode toggle
     // if (e.key === 'h' || e.key === 'H') {
@@ -2117,6 +2331,8 @@ function setupKeyboardShortcuts() {
     if (e.key === 'Escape') {
       if (deleteAnnotationModal.classList.contains('active')) {
         hideDeleteAnnotationModal();
+      } else if (importCompatibilityModal.classList.contains('active')) {
+        hideImportCompatibilityModal();
       } else if (pdfNotFoundModal.classList.contains('active')) {
         window.api.navigateToHome();
       } else if (completionModal.classList.contains('active')) {

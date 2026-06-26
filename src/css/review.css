@@ -103,6 +103,21 @@
   color: white;
 }
 
+.btn-thumbnails svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-thumbnails.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-thumbnails.active:hover {
+  background-color: var(--color-primary-hover);
+  color: white;
+}
+
 /* Dual Page Spread */
 .pdf-page-spread {
   display: flex;
@@ -163,7 +178,8 @@
   font-size: 0.8125rem;
 }
 
-/* Export Button */
+/* Import / Export Buttons */
+.btn-import svg,
 .btn-export svg {
   width: 18px;
   height: 18px;
@@ -295,6 +311,82 @@
   overflow: auto;
   background-color: var(--color-bg);
   position: relative;
+  min-width: 0;
+}
+
+.pdf-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pdf-thumbnail-sidebar {
+  width: 0;
+  flex: 0 0 0;
+  overflow: hidden;
+  background-color: var(--color-bg-secondary);
+  border-right: 0 solid var(--color-border);
+  transition:
+    flex-basis var(--transition-normal),
+    border-right-width var(--transition-fast);
+}
+
+.pdf-workspace.show-thumbnails .pdf-thumbnail-sidebar {
+  flex-basis: 132px;
+  border-right-width: 1px;
+  overflow-y: auto;
+}
+
+.pdf-thumbnail-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-sm);
+}
+
+.pdf-thumbnail {
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  padding: 7px;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.pdf-thumbnail:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text);
+}
+
+.pdf-thumbnail.active {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pdf-thumbnail-canvas {
+  width: 96px;
+  min-height: 124px;
+  display: block;
+  background-color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.pdf-thumbnail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 
@@ -879,6 +971,28 @@
   width: 16px;
   height: 16px;
   color: var(--color-text-secondary);
+}
+
+.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-left: var(--spacing-sm);
+}
+
+.toast-action {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background-color: rgba(255, 255, 255, 0.16);
 }
 
 /* Loading State for PDF */

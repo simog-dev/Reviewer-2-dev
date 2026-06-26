@@ -17,6 +17,8 @@ async function initPdfJs() {
 const RENDER_BUFFER_VIEWPORTS = 2;
 const PDF_TO_CSS_UNITS = pdfjsLib.PixelsPerInch?.PDF_TO_CSS_UNITS || (96 / 72);
 const HIGHLIGHT_HIT_TOLERANCE = 2;
+const THUMBNAIL_WIDTH = 96;
+const THUMBNAIL_OBSERVER_MARGIN = '600px 0px';
 
 // Category highlight colors (rgba with alpha for fill)
 const CATEGORY_COLORS = {
@@ -35,7 +37,9 @@ export class PDFViewer {
     this.pages = [];               // PDF page objects (fetched during placeholder init)
     this.pageElements = new Map(); // pageNumber → {container, canvas, textLayer, highlightCanvas}
     this.renderedPages = new Set(); // pages with canvas + text currently rendered
+    this.renderedThumbnails = new Set(); // pages with thumbnail canvas rendered
     this.renderGeneration = 0;     // incremented on scale change to discard stale in-flight renders
+    this.thumbnailGeneration = 0;   // incremented when thumbnails are rebuilt
     this.scale = options.scale || 1;
     this.currentPage = 1;
     this.totalPages = 0;
@@ -51,6 +55,9 @@ export class PDFViewer {
     this.annotations = [];
     this.highlights = [];  // Simple highlights (not annotations)
     this.observer = null;
+    this.thumbnailObserver = null;
+    this.thumbnailContainer = options.thumbnailContainer || null;
+    this.thumbnailElements = new Map(); // pageNumber → {button, canvas}
     this.dualPageMode = false;
 
     // Reference tracking
@@ -109,9 +116,13 @@ export class PDFViewer {
       this.pages = [];
       this.pageElements.clear();
       this.renderedPages.clear();
+      this.thumbnailElements.clear();
+      this.renderedThumbnails.clear();
       this.searchPageCache.clear();
       this.renderGeneration++;
+      this.thumbnailGeneration++;
       this.destroyObserver();
+      this.destroyThumbnailObserver();
 
       // Create sized placeholders for all pages (no canvas rendering yet).
       // This establishes the correct total scroll height immediately.
@@ -121,6 +132,7 @@ export class PDFViewer {
       this.setupObserver();
       this.renderVisiblePages();
       this.updateCurrentPageFromScroll();
+      this.buildThumbnails();
 
       // Extract references in background (non-blocking)
       this.extractReferences();
@@ -362,6 +374,148 @@ export class PDFViewer {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+  }
+
+  setThumbnailContainer(containerElement) {
+    this.thumbnailContainer = containerElement;
+    this.buildThumbnails();
+  }
+
+  buildThumbnails() {
+    if (!this.thumbnailContainer || !this.pdf || this.pages.length === 0) return;
+
+    this.destroyThumbnailObserver();
+    this.thumbnailContainer.innerHTML = '';
+    this.thumbnailElements.clear();
+    this.renderedThumbnails.clear();
+    this.thumbnailGeneration++;
+
+    for (let pageNumber = 1; pageNumber <= this.totalPages; pageNumber++) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pdf-thumbnail';
+      button.dataset.pageNumber = pageNumber;
+      button.setAttribute('aria-label', `Go to page ${pageNumber}`);
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-thumbnail-canvas';
+
+      const label = document.createElement('span');
+      label.className = 'pdf-thumbnail-label';
+      label.textContent = pageNumber;
+
+      button.appendChild(canvas);
+      button.appendChild(label);
+      button.addEventListener('click', () => {
+        this.scrollToPage(pageNumber);
+      });
+
+      this.thumbnailContainer.appendChild(button);
+      this.thumbnailElements.set(pageNumber, { button, canvas });
+    }
+
+    this.setupThumbnailObserver();
+    this.setActiveThumbnail(this.currentPage);
+  }
+
+  setupThumbnailObserver() {
+    if (!this.thumbnailContainer) return;
+
+    const scrollRoot = this.thumbnailContainer.closest('.pdf-thumbnail-sidebar') || this.thumbnailContainer;
+
+    this.thumbnailObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const pageNumber = parseInt(entry.target.dataset.pageNumber, 10);
+        this.renderThumbnailIfNeeded(pageNumber);
+      });
+    }, {
+      root: scrollRoot,
+      rootMargin: THUMBNAIL_OBSERVER_MARGIN
+    });
+
+    this.thumbnailElements.forEach(({ button }) => {
+      this.thumbnailObserver.observe(button);
+    });
+  }
+
+  destroyThumbnailObserver() {
+    if (this.thumbnailObserver) {
+      this.thumbnailObserver.disconnect();
+      this.thumbnailObserver = null;
+    }
+  }
+
+  async renderThumbnailIfNeeded(pageNumber) {
+    if (this.renderedThumbnails.has(pageNumber)) return;
+    this.renderedThumbnails.add(pageNumber);
+
+    const generation = this.thumbnailGeneration;
+    const page = this.pages[pageNumber - 1];
+    const elements = this.thumbnailElements.get(pageNumber);
+    if (!page || !elements) {
+      this.renderedThumbnails.delete(pageNumber);
+      return;
+    }
+
+    const baseViewport = page.getViewport({ scale: 1 });
+    const thumbnailScale = THUMBNAIL_WIDTH / baseViewport.width;
+    const layoutViewport = page.getViewport({ scale: thumbnailScale });
+    const pixelRatio = window.devicePixelRatio || 1;
+    const renderViewport = page.getViewport({ scale: thumbnailScale * pixelRatio });
+    const { canvas } = elements;
+    const context = canvas.getContext('2d');
+
+    canvas.width = Math.floor(renderViewport.width);
+    canvas.height = Math.floor(renderViewport.height);
+    canvas.style.width = `${Math.floor(layoutViewport.width)}px`;
+    canvas.style.height = `${Math.floor(layoutViewport.height)}px`;
+
+    try {
+      await page.render({
+        canvasContext: context,
+        viewport: renderViewport
+      }).promise;
+    } catch (error) {
+      this.renderedThumbnails.delete(pageNumber);
+      console.warn(`Thumbnail rendering failed for page ${pageNumber}:`, error);
+      return;
+    }
+
+    if (generation !== this.thumbnailGeneration) {
+      this.renderedThumbnails.delete(pageNumber);
+    }
+  }
+
+  renderVisibleThumbnails() {
+    if (!this.thumbnailContainer || this.thumbnailElements.size === 0) return;
+
+    const scrollRoot = this.thumbnailContainer.closest('.pdf-thumbnail-sidebar') || this.thumbnailContainer;
+    const rootRect = scrollRoot.getBoundingClientRect();
+    if (rootRect.width === 0 || rootRect.height === 0) return;
+
+    this.thumbnailElements.forEach(({ button }, pageNumber) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.bottom >= rootRect.top - 200 && rect.top <= rootRect.bottom + 200) {
+        this.renderThumbnailIfNeeded(pageNumber);
+      }
+    });
+  }
+
+  setActiveThumbnail(pageNumber) {
+    if (!this.thumbnailContainer || this.thumbnailElements.size === 0) return;
+
+    this.thumbnailElements.forEach(({ button }, buttonPageNumber) => {
+      const isActive = buttonPageNumber === pageNumber;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-current', isActive ? 'page' : 'false');
+    });
+
+    const active = this.thumbnailElements.get(pageNumber);
+    if (active) {
+      active.button.scrollIntoView({ block: 'nearest' });
+      this.renderThumbnailIfNeeded(pageNumber);
     }
   }
 
