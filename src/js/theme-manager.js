@@ -93,24 +93,14 @@ class ThemeManager {
   }
 
   /**
-   * Cicla tra le tre modalità in modo intelligente
-   * - Da auto: vai al tema opposto a quello corrente (se sei in light vai a dark, se sei in dark vai a light)
-   * - Da light: vai a dark
-   * - Da dark: vai a auto
+   * Cicla tra i due temi visivi in base al tema attualmente applicato.
+   * L'opzione "auto" resta supportata come preferenza salvata, ma il pulsante
+   * deve sempre cambiare immediatamente l'aspetto visibile.
    * @returns {string} La nuova preferenza
    */
   static async cycle() {
-    let nextMode;
-
-    if (this.preference === 'auto') {
-      // Se sei in auto, salta direttamente al tema opposto
-      const currentTheme = this.getCurrentTheme();
-      nextMode = currentTheme === 'dark' ? 'light' : 'dark';
-    } else if (this.preference === 'light') {
-      nextMode = 'dark';
-    } else {
-      nextMode = 'auto';
-    }
+    const currentTheme = this.getCurrentTheme();
+    const nextMode = currentTheme === 'dark' ? 'light' : 'dark';
 
     await this.setTheme(nextMode);
     return nextMode;

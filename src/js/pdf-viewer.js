@@ -186,8 +186,7 @@ export class PDFViewer {
 
         // First check for annotations
         const hitAnnotation = this.annotations.find(ann => {
-          if (ann.page_number !== pageNumber) return false;
-          return ann.highlight_rects.some(rect =>
+          return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
             clickX >= rect.left && clickX <= rect.left + rect.width &&
             clickY >= rect.top && clickY <= rect.top + rect.height
           );
@@ -201,8 +200,7 @@ export class PDFViewer {
 
         // Then check for simple highlights
         const hitHighlight = this.highlights.find(hl => {
-          if (hl.page_number !== pageNumber) return false;
-          return hl.highlight_rects.some(rect =>
+          return this._getHighlightRectsForPage(hl, pageNumber).some(rect =>
             clickX >= rect.left && clickX <= rect.left + rect.width &&
             clickY >= rect.top && clickY <= rect.top + rect.height
           );
@@ -223,8 +221,7 @@ export class PDFViewer {
         const clickY = (e.clientY - pageRect.top) / coordinateScale;
 
         const hitAnnotation = this.annotations.find(ann => {
-          if (ann.page_number !== pageNumber) return false;
-          return ann.highlight_rects.some(rect =>
+          return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
             clickX >= rect.left && clickX <= rect.left + rect.width &&
             clickY >= rect.top && clickY <= rect.top + rect.height
           );
@@ -251,8 +248,7 @@ export class PDFViewer {
 
         // Check annotations
         const overAnnotation = this.annotations.some(ann => {
-          if (ann.page_number !== pageNumber) return false;
-          return ann.highlight_rects.some(rect =>
+          return this._getHighlightRectsForPage(ann, pageNumber).some(rect =>
             mx >= rect.left && mx <= rect.left + rect.width &&
             my >= rect.top && my <= rect.top + rect.height
           );
@@ -260,8 +256,7 @@ export class PDFViewer {
 
         // Check simple highlights
         const overSimpleHighlight = this.highlights.some(hl => {
-          if (hl.page_number !== pageNumber) return false;
-          return hl.highlight_rects.some(rect =>
+          return this._getHighlightRectsForPage(hl, pageNumber).some(rect =>
             mx >= rect.left && mx <= rect.left + rect.width &&
             my >= rect.top && my <= rect.top + rect.height
           );
@@ -659,13 +654,10 @@ export class PDFViewer {
       let range = selection.getRangeAt(0);
       if (!range) return;
 
-      // Check if selection is within the PDF viewer
-      const textLayer = range.commonAncestorContainer.closest?.('.textLayer') ||
-                        range.commonAncestorContainer.parentElement?.closest?.('.textLayer');
-      if (!textLayer) return;
-
-      const pageContainer = textLayer.closest('.pdf-page');
-      if (!pageContainer) return;
+      // Check if selection starts and ends within rendered PDF text layers.
+      const startTextLayer = this._getTextLayerForNode(range.startContainer);
+      const endTextLayer = this._getTextLayerForNode(range.endContainer);
+      if (!startTextLayer || !endTextLayer) return;
 
       // Expand range to include complete words
       range = this.expandRangeToWordBoundaries(range);
@@ -674,21 +666,25 @@ export class PDFViewer {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      const pageNumber = parseInt(pageContainer.dataset.pageNumber, 10);
+      const startPageContainer = this._getTextLayerForNode(range.startContainer)?.closest('.pdf-page') ||
+                                 startTextLayer.closest('.pdf-page');
+      if (!startPageContainer) return;
+
+      const pageNumber = parseInt(startPageContainer.dataset.pageNumber, 10);
       const selectedText = selection.toString().trim();
 
       if (!selectedText) return;
 
-      // Get bounding rects relative to the page.
-      // We use per-span bounding rects instead of range.getClientRects() because
-      // PDF.js text layer spans use CSS transforms for positioning, and
-      // getClientRects() can return incorrect/incomplete rects when a selection
-      // crosses spans with different transforms (e.g. superscript characters).
-      const pageRect = pageContainer.getBoundingClientRect();
-      const rects = this._getSelectionRectsFromSpans(range, textLayer, pageRect);
+      const selectedPages = this._getSelectionRectsByPage(range);
+      if (selectedPages.length === 0) return;
 
-      // Merge adjacent rects
-      const mergedRects = this.mergeRects(rects);
+      const isMultiPageSelection = selectedPages.length > 1;
+      const mergedRects = selectedPages.flatMap(({ pageNumber: rectPageNumber, rects }) => {
+        return this.mergeRects(rects).map(rect => (
+          isMultiPageSelection ? { ...rect, pageNumber: rectPageNumber } : rect
+        ));
+      });
+      if (mergedRects.length === 0) return;
 
       this.onTextSelected({
         pageNumber,
@@ -698,6 +694,33 @@ export class PDFViewer {
         mouseY: e.clientY
       });
     });
+  }
+
+  _getTextLayerForNode(node) {
+    if (!node) return null;
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      return node.closest?.('.textLayer') || null;
+    }
+
+    return node.parentElement?.closest?.('.textLayer') || null;
+  }
+
+  _getSelectionRectsByPage(range) {
+    const pages = [];
+
+    this.pageElements.forEach((elements, pageNumber) => {
+      const { container, textLayer } = elements;
+      if (!textLayer || !container || !range.intersectsNode(textLayer)) return;
+
+      const pageRect = container.getBoundingClientRect();
+      const rects = this._getSelectionRectsFromSpans(range, textLayer, pageRect);
+      if (rects.length === 0) return;
+
+      pages.push({ pageNumber, rects });
+    });
+
+    return pages.sort((a, b) => a.pageNumber - b.pageNumber);
   }
 
   // Expand selection range to include complete words at boundaries
@@ -992,21 +1015,36 @@ export class PDFViewer {
     const pixelRatio = window.devicePixelRatio || 1;
 
     // Draw simple highlights first (so annotations are on top)
-    const pageHighlights = this.highlights.filter(h => h.page_number === pageNumber);
+    const pageHighlights = this.highlights.filter(h => this._hasHighlightRectsOnPage(h, pageNumber));
     for (const hl of pageHighlights) {
-      this._drawSimpleHighlightRects(ctx, hl, pixelRatio, 0.3);
+      this._drawSimpleHighlightRects(ctx, hl, pixelRatio, 0.3, pageNumber);
     }
 
     // Then draw annotation highlights
-    const pageAnnotations = this.annotations.filter(a => a.page_number === pageNumber);
+    const pageAnnotations = this.annotations.filter(a => this._hasHighlightRectsOnPage(a, pageNumber));
     for (const ann of pageAnnotations) {
-      this._drawAnnotationRects(ctx, ann, pixelRatio, 0.75);
+      this._drawAnnotationRects(ctx, ann, pixelRatio, 0.75, pageNumber);
     }
 
   }
 
+  _getHighlightRectsForPage(item, pageNumber) {
+    if (!item.highlight_rects || item.highlight_rects.length === 0) {
+      return [];
+    }
+
+    return item.highlight_rects.filter(rect => {
+      const rectPageNumber = rect.pageNumber || rect.page_number || item.page_number;
+      return rectPageNumber === pageNumber;
+    });
+  }
+
+  _hasHighlightRectsOnPage(item, pageNumber) {
+    return this._getHighlightRectsForPage(item, pageNumber).length > 0;
+  }
+
   // Draw the rectangles for a single annotation on a canvas context
-  _drawAnnotationRects(ctx, annotation, pixelRatio, alpha) {
+  _drawAnnotationRects(ctx, annotation, pixelRatio, alpha, pageNumber = annotation.page_number) {
     // Skip free notes (annotations with no highlight rectangles)
     if (!annotation.highlight_rects || annotation.highlight_rects.length === 0) {
       return;
@@ -1025,7 +1063,7 @@ export class PDFViewer {
 
     ctx.fillStyle = fillStyle;
 
-    for (const rect of annotation.highlight_rects) {
+    for (const rect of this._getHighlightRectsForPage(annotation, pageNumber)) {
       ctx.fillRect(
         rect.left * this._viewportScale() * pixelRatio,
         rect.top * this._viewportScale() * pixelRatio,
@@ -1036,7 +1074,7 @@ export class PDFViewer {
   }
 
   // Draw the rectangles for a simple highlight (not annotation)
-  _drawSimpleHighlightRects(ctx, highlight, pixelRatio, alpha) {
+  _drawSimpleHighlightRects(ctx, highlight, pixelRatio, alpha, pageNumber = highlight.page_number) {
     if (!highlight.highlight_rects || highlight.highlight_rects.length === 0) {
       return;
     }
@@ -1045,7 +1083,7 @@ export class PDFViewer {
     const color = highlight.color || '#fbbf24';
     ctx.fillStyle = this._hexToRgba(color, alpha);
 
-    for (const rect of highlight.highlight_rects) {
+    for (const rect of this._getHighlightRectsForPage(highlight, pageNumber)) {
       ctx.fillRect(
         rect.left * this._viewportScale() * pixelRatio,
         rect.top * this._viewportScale() * pixelRatio,
@@ -1064,15 +1102,27 @@ export class PDFViewer {
   }
 
   renderHighlight(annotation) {
-    // For canvas-based highlights, just redraw the whole page
-    this.redrawPageHighlights(annotation.page_number);
+    this._redrawPagesForHighlightItem(annotation);
   }
 
   updateHighlight(annotationId, categoryName) {
     const annotation = this.annotations.find(a => a.id === annotationId);
     if (annotation) {
-      this.redrawPageHighlights(annotation.page_number);
+      this._redrawPagesForHighlightItem(annotation);
     }
+  }
+
+  _redrawPagesForHighlightItem(item) {
+    const pageNumbers = new Set([item.page_number]);
+    for (const rect of item.highlight_rects || []) {
+      pageNumbers.add(rect.pageNumber || rect.page_number || item.page_number);
+    }
+
+    pageNumbers.forEach(pageNumber => {
+      if (this.renderedPages.has(pageNumber)) {
+        this.redrawPageHighlights(pageNumber);
+      }
+    });
   }
 
   removeHighlight(annotationId) {
@@ -1090,11 +1140,14 @@ export class PDFViewer {
     const annotation = this.annotations.find(a => a.id === annotationId);
     if (!annotation) return;
 
-    await this.renderPageIfNeeded(annotation.page_number);
+    const firstRect = annotation.highlight_rects?.[0];
+    const targetPageNumber = firstRect?.pageNumber || firstRect?.page_number || annotation.page_number;
+
+    await this.renderPageIfNeeded(targetPageNumber);
     // Wait one frame for the browser to finish layout after rendering
     await new Promise(resolve => requestAnimationFrame(resolve));
 
-    const elements = this.pageElements.get(annotation.page_number);
+    const elements = this.pageElements.get(targetPageNumber);
     if (!elements) return;
 
     // For free notes (no highlight rects), just scroll to the page
@@ -1108,7 +1161,7 @@ export class PDFViewer {
 
     const pixelRatio = window.devicePixelRatio || 1;
     const ctx = elements.highlightCanvas.getContext('2d');
-    const pageNumber = annotation.page_number;
+    const pageNumber = targetPageNumber;
 
     // Flash animation: alternate between high and normal opacity
     let flashCount = 0;
@@ -1120,7 +1173,7 @@ export class PDFViewer {
       if (flashCount < maxFlashes) {
         // Draw this annotation's rects with higher opacity on even counts
         if (flashCount % 2 === 0) {
-          this._drawAnnotationRects(ctx, annotation, pixelRatio, 0.55);
+          this._drawAnnotationRects(ctx, annotation, pixelRatio, 0.55, pageNumber);
         }
         flashCount++;
         setTimeout(() => requestAnimationFrame(flash), flashInterval);
@@ -1130,7 +1183,6 @@ export class PDFViewer {
     requestAnimationFrame(flash);
 
     // Scroll so the first highlight rect is vertically centered in the container
-    const firstRect = annotation.highlight_rects[0];
     if (firstRect) {
       this._scrollToRectInPage(elements, firstRect);
     } else {

@@ -29,7 +29,7 @@ const CITATION_PATTERNS = {
 };
 
 // Regex patterns for DOI and URL extraction
-const DOI_PATTERN = /\b(10\.\d{4,}\/[^\s\]<>]+)/gi;
+const DOI_PATTERN = /\b(10\.\d{4,}\/(?:(?!doi:)[^\s\]<>])+)/gi;
 const URL_PATTERN = /https?:\/\/[^\s\]<>]+/gi;
 
 // Patterns to identify reference section headers
