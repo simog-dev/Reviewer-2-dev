@@ -60,6 +60,7 @@ export class PDFViewer {
     this.pageContentBands = new Map();  // pageNumber → {minY, maxY} in PDF coords
     this.refPages = new Set();          // pages that contain reference entries
     this.refFormat = 'bracket';         // 'bracket' ([N]) or 'dot' (N.)
+    this.searchPageCache = new Map();   // pageNumber → searchable text + coordinate index
     this.textLayerSelectionCleanupBound = false;
     this.selectionDragStart = null;
 
@@ -108,6 +109,7 @@ export class PDFViewer {
       this.pages = [];
       this.pageElements.clear();
       this.renderedPages.clear();
+      this.searchPageCache.clear();
       this.renderGeneration++;
       this.destroyObserver();
 
@@ -1461,150 +1463,137 @@ export class PDFViewer {
   }
 
   /**
-   * Find text in the rendered PDF text layers and return DOM-aligned rects.
-   * This avoids rebuilding PDF item coordinates by hand, which drifts from
-   * PDF.js for scaled, transformed, or fragmented text runs.
+   * Find text incrementally without forcing every page to render.
+   * Uses PDF.js text content cached per page, yields between pages, and lets
+   * callers ignore/cancel stale searches when the user keeps typing.
    * @param {string} query
+   * @param {Object} options
    * @returns {Promise<Array<{pageNum: number, textIndex: number, text: string, rects: Array}>>}
    */
-  async findText(query) {
+  async findText(query, options = {}) {
     const needle = (query || '').trim();
     if (!needle || !this.pdf) return [];
 
     const matches = [];
     const needleLower = needle.toLowerCase();
+    const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+    const isCancelled = typeof options.isCancelled === 'function' ? options.isCancelled : () => false;
 
     for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
-      await this.renderPageIfNeeded(pageNum);
-      await new Promise(resolve => requestAnimationFrame(resolve));
+      if (isCancelled()) return matches;
 
-      const elements = this.pageElements.get(pageNum);
-      if (!elements?.textLayer) continue;
-
-      const pageRect = elements.container.getBoundingClientRect();
-      const textNodes = this._getTextLayerTextNodes(elements.textLayer);
-      if (textNodes.length === 0) continue;
-
-      let fullText = '';
-      const nodeMap = [];
-
-      for (const node of textNodes) {
-        const text = node.textContent || '';
-        if (!text) continue;
-
-        nodeMap.push({
-          node,
-          startOffset: fullText.length,
-          endOffset: fullText.length + text.length
-        });
-        fullText += text;
+      const pageIndex = await this._getSearchPageIndex(pageNum);
+      if (isCancelled()) return matches;
+      if (!pageIndex || pageIndex.fullText.length === 0) {
+        onProgress?.({ matches, pageNum, totalPages: this.totalPages });
+        await this._yieldToBrowser();
+        continue;
       }
 
-      const fullTextLower = fullText.toLowerCase();
       let startIndex = 0;
 
       while (true) {
-        const index = fullTextLower.indexOf(needleLower, startIndex);
+        const index = pageIndex.fullTextLower.indexOf(needleLower, startIndex);
         if (index === -1) break;
 
-        const rects = this._getTextRangeRectsFromNodes(
-          nodeMap,
+        const rects = this._getTextRangeRectsFromPageIndex(
+          pageIndex,
           index,
-          index + needle.length,
-          pageRect
+          index + needle.length
         );
         const mergedRects = this.mergeRects(rects);
 
         matches.push({
           pageNum,
           textIndex: index,
-          text: fullText.substring(index, index + needle.length),
+          text: pageIndex.fullText.substring(index, index + needle.length),
           rects: mergedRects
         });
 
         startIndex = index + 1;
       }
+
+      onProgress?.({ matches, pageNum, totalPages: this.totalPages });
+      await this._yieldToBrowser();
     }
 
     return matches;
   }
 
-  /**
-   * Get searchable text nodes from PDF.js presentation spans only.
-   * Skips UI overlays inserted into the text layer (search highlights, etc.).
-   */
-  _getTextLayerTextNodes(textLayer) {
-    const nodes = [];
-    const walker = document.createTreeWalker(
-      textLayer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          const parentSpan = node.parentElement?.closest('span[role="presentation"]');
-          if (!parentSpan || !textLayer.contains(parentSpan)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          if (node.parentElement?.closest('.pdf-search-highlight')) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          return node.textContent ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-      }
-    );
-
-    let node;
-    while ((node = walker.nextNode())) {
-      nodes.push(node);
+  async _getSearchPageIndex(pageNum) {
+    if (this.searchPageCache.has(pageNum)) {
+      return this.searchPageCache.get(pageNum);
     }
 
-    return nodes;
+    const page = this.pages[pageNum - 1];
+    if (!page) return null;
+
+    const textContent = await page.getTextContent({
+      includeMarkedContent: true,
+      disableNormalization: true
+    });
+    const viewport = page.getViewport({ scale: 1 });
+    const fullTextParts = [];
+    const charPositions = [];
+
+    textContent.items
+      .filter(item => !/^For\s+Peer\s+Review$/i.test((item.str || '').trim()))
+      .forEach((item) => {
+        const text = item.str || '';
+        fullTextParts.push(text);
+
+        for (let i = 0; i < text.length; i++) {
+          charPositions.push({ item, charIndexInItem: i });
+        }
+
+        fullTextParts.push(' ');
+        charPositions.push(null);
+      });
+
+    const fullText = fullTextParts.join('');
+    const pageIndex = {
+      fullText,
+      fullTextLower: fullText.toLowerCase(),
+      charPositions,
+      viewportHeight: viewport.height
+    };
+
+    this.searchPageCache.set(pageNum, pageIndex);
+    return pageIndex;
   }
 
-  _getTextRangeRectsFromNodes(nodeMap, rangeStart, rangeEnd, pageRect) {
+  _getTextRangeRectsFromPageIndex(pageIndex, rangeStart, rangeEnd) {
     const rects = [];
 
-    for (const nodeInfo of nodeMap) {
-      if (nodeInfo.endOffset <= rangeStart) continue;
-      if (nodeInfo.startOffset >= rangeEnd) break;
+    for (let i = rangeStart; i < rangeEnd && i < pageIndex.charPositions.length; i++) {
+      const charPos = pageIndex.charPositions[i];
+      if (!charPos) continue;
 
-      const start = Math.max(0, rangeStart - nodeInfo.startOffset);
-      const end = Math.min(nodeInfo.node.textContent.length, rangeEnd - nodeInfo.startOffset);
-      if (end <= start) continue;
+      const item = charPos.item;
+      const textLength = Math.max((item.str || '').length, 1);
+      const tx = item.transform || [1, 0, 0, 1, 0, 0];
+      const charWidth = (item.width || 0) / textLength;
+      const height = item.height || Math.abs(tx[3]) || 1;
 
-      const subRange = document.createRange();
-      subRange.setStart(nodeInfo.node, start);
-      subRange.setEnd(nodeInfo.node, end);
-
-      const domRects = subRange.getClientRects();
-      if (domRects.length > 0) {
-        for (let i = 0; i < domRects.length; i++) {
-          const rect = domRects[i];
-          if (rect.width < 1 || rect.height < 1) continue;
-          rects.push(this._domRectToPageRect(rect, pageRect));
-        }
-      } else {
-        const parentSpan = nodeInfo.node.parentElement?.closest('span[role="presentation"]');
-        if (parentSpan) {
-          const spanRect = parentSpan.getBoundingClientRect();
-          if (spanRect.width >= 1 && spanRect.height >= 1) {
-            rects.push(this._domRectToPageRect(spanRect, pageRect));
-          }
-        }
-      }
-
-      subRange.detach?.();
+      rects.push({
+        left: tx[4] + (charPos.charIndexInItem * charWidth),
+        top: pageIndex.viewportHeight - tx[5] - height,
+        width: charWidth || 1,
+        height
+      });
     }
 
     return rects;
   }
 
-  _domRectToPageRect(rect, pageRect) {
-    return {
-      left: (rect.left - pageRect.left) / this._viewportScale(),
-      top: (rect.top - pageRect.top) / this._viewportScale(),
-      width: rect.width / this._viewportScale(),
-      height: rect.height / this._viewportScale()
-    };
+  _yieldToBrowser() {
+    return new Promise(resolve => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => resolve());
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
   }
 
   /**

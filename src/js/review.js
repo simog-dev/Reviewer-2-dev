@@ -1155,6 +1155,7 @@ async function handlePDFNotFoundReload() {
 // PDF Search Functions
 let searchMatches = [];
 let currentSearchMatchIndex = -1;
+let pdfSearchToken = 0;
 
 function openPDFSearch() {
   pdfSearchBar.classList.add('active');
@@ -1163,6 +1164,7 @@ function openPDFSearch() {
 }
 
 function closePDFSearch() {
+  pdfSearchToken++;
   pdfSearchBar.classList.remove('active');
   pdfSearchInput.value = '';
   searchMatches = [];
@@ -1172,6 +1174,8 @@ function closePDFSearch() {
 }
 
 async function performPDFSearch(query) {
+  const searchToken = ++pdfSearchToken;
+
   if (!query || !pdfViewer) {
     searchMatches = [];
     currentSearchMatchIndex = -1;
@@ -1184,23 +1188,52 @@ async function performPDFSearch(query) {
   clearSearchHighlights();
   searchMatches = [];
   currentSearchMatchIndex = -1;
+  pdfSearchCount.textContent = 'Searching...';
+  pdfSearchPrev.disabled = true;
+  pdfSearchNext.disabled = true;
 
-  let usedDomAlignedSearch = false;
+  let usedIncrementalSearch = false;
+  let lastProgressHighlightRender = 0;
 
   if (typeof pdfViewer.findText === 'function') {
     try {
-      searchMatches = await pdfViewer.findText(query);
-      usedDomAlignedSearch = true;
+      searchMatches = await pdfViewer.findText(query, {
+        isCancelled: () => searchToken !== pdfSearchToken,
+        onProgress: ({ matches, pageNum, totalPages }) => {
+          if (searchToken !== pdfSearchToken) return;
+
+          searchMatches = [...matches];
+          if (searchMatches.length > 0 && currentSearchMatchIndex === -1) {
+            currentSearchMatchIndex = 0;
+          }
+
+          if (searchMatches.length > 0) {
+            pdfSearchCount.textContent = `${searchMatches.length} found...`;
+            const now = Date.now();
+            if (now - lastProgressHighlightRender > 150) {
+              lastProgressHighlightRender = now;
+              renderSearchHighlights();
+            }
+          } else {
+            pdfSearchCount.textContent = `Searching ${pageNum}/${totalPages}`;
+          }
+        }
+      });
+      if (searchToken !== pdfSearchToken) return;
+      usedIncrementalSearch = true;
     } catch (error) {
-      console.warn('DOM-aligned PDF search failed, falling back to PDF item coordinates:', error);
+      if (searchToken !== pdfSearchToken) return;
+      console.warn('Incremental PDF search failed, falling back to page scan:', error);
     }
   }
 
-  if (!usedDomAlignedSearch) {
+  if (!usedIncrementalSearch) {
     const queryLower = query.toLowerCase();
 
     // Search through all pages
     for (let pageNum = 1; pageNum <= pdfViewer.totalPages; pageNum++) {
+      if (searchToken !== pdfSearchToken) return;
+
       const page = pdfViewer.pages[pageNum - 1];
       if (!page) continue;
 
@@ -1277,8 +1310,22 @@ async function performPDFSearch(query) {
       } catch (error) {
         console.warn(`Failed to search page ${pageNum}:`, error);
       }
+
+      if (searchToken !== pdfSearchToken) return;
+      pdfSearchCount.textContent = searchMatches.length > 0
+        ? `${searchMatches.length} found...`
+        : `Searching ${pageNum}/${pdfViewer.totalPages}`;
+      await new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => resolve());
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
     }
   }
+
+  if (searchToken !== pdfSearchToken) return;
 
   // Update UI
   if (searchMatches.length > 0) {
