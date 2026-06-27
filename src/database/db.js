@@ -52,6 +52,20 @@ class DBManager {
     try {
       this.db.exec(`ALTER TABLE pdfs ADD COLUMN completed_at TEXT`);
     } catch (e) { /* already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE pdfs ADD COLUMN project_id TEXT`);
+    } catch (e) { /* already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE pdfs ADD COLUMN review_deadline TEXT`);
+    } catch (e) { /* already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE pdfs ADD COLUMN review_content TEXT`);
+    } catch (e) { /* already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE pdfs ADD COLUMN review_updated_at TEXT`);
+    } catch (e) { /* already exists */ }
+
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_pdfs_project_id ON pdfs(project_id)`);
 
     // Migrate old completion_comment to review_decision if column exists
     try {
@@ -62,6 +76,45 @@ class DBManager {
         this.db.exec(`UPDATE pdfs SET review_decision = completion_comment WHERE completion_comment IS NOT NULL AND review_decision IS NULL`);
       }
     } catch (e) { /* ignore */ }
+
+    this.migratePDFsToProjects();
+  }
+
+  migratePDFsToProjects() {
+    const unmigrated = this.db.prepare(`
+      SELECT id, name, created_at, updated_at
+      FROM pdfs
+      WHERE project_id IS NULL
+      ORDER BY created_at ASC, name ASC
+    `).all();
+
+    if (unmigrated.length === 0) return;
+
+    const insertProject = this.db.prepare(`
+      INSERT INTO projects (id, name, created_at, updated_at)
+      VALUES (@id, @name, COALESCE(@createdAt, datetime('now')), COALESCE(@updatedAt, datetime('now')))
+    `);
+    const assignPDF = this.db.prepare(`
+      UPDATE pdfs
+      SET project_id = @projectId,
+          updated_at = datetime('now')
+      WHERE id = @pdfId
+    `);
+
+    const migrate = this.db.transaction((pdfs) => {
+      pdfs.forEach((pdf, index) => {
+        const projectId = uuidv4();
+        insertProject.run({
+          id: projectId,
+          name: `Progetto ${index + 1}`,
+          createdAt: pdf.created_at,
+          updatedAt: pdf.updated_at
+        });
+        assignPDF.run({ projectId, pdfId: pdf.id });
+      });
+    });
+
+    migrate(unmigrated);
   }
 
   prepareStatements() {
@@ -69,20 +122,28 @@ class DBManager {
     this.stmts = {
       // PDFs
       insertPDF: this.db.prepare(`
-        INSERT INTO pdfs (id, name, path, page_count, created_at, updated_at)
-        VALUES (@id, @name, @path, @pageCount, datetime('now'), datetime('now'))
+        INSERT INTO pdfs (id, project_id, name, path, page_count, review_deadline, created_at, updated_at)
+        VALUES (@id, @projectId, @name, @path, @pageCount, @reviewDeadline, datetime('now'), datetime('now'))
       `),
       getAllPDFs: this.db.prepare(`
         SELECT p.*,
+               pr.name as project_name,
+               pr.conference as project_conference,
+               pr.submission_link as project_submission_link,
                (SELECT COUNT(*) FROM annotations WHERE pdf_id = p.id) as annotation_count
         FROM pdfs p
+        LEFT JOIN projects pr ON pr.id = p.project_id
         WHERE p.removed = 0
         ORDER BY p.updated_at DESC
       `),
       getPDF: this.db.prepare(`
         SELECT p.*,
+               pr.name as project_name,
+               pr.conference as project_conference,
+               pr.submission_link as project_submission_link,
                (SELECT COUNT(*) FROM annotations WHERE pdf_id = p.id) as annotation_count
         FROM pdfs p
+        LEFT JOIN projects pr ON pr.id = p.project_id
         WHERE p.id = ?
       `),
       updatePDF: this.db.prepare(`
@@ -90,6 +151,18 @@ class DBManager {
         SET name = COALESCE(@name, name),
             path = COALESCE(@path, path),
             page_count = COALESCE(@pageCount, page_count),
+            review_deadline = CASE
+              WHEN @reviewDeadlineSet = 1 THEN @reviewDeadline
+              ELSE review_deadline
+            END,
+            review_content = CASE
+              WHEN @reviewContentSet = 1 THEN @reviewContent
+              ELSE review_content
+            END,
+            review_updated_at = CASE
+              WHEN @reviewUpdatedAtSet = 1 THEN @reviewUpdatedAt
+              ELSE review_updated_at
+            END,
             last_opened_at = COALESCE(@lastOpenedAt, last_opened_at),
             updated_at = datetime('now')
         WHERE id = @id
@@ -97,14 +170,41 @@ class DBManager {
       deletePDF: this.db.prepare(`DELETE FROM pdfs WHERE id = ?`),
       searchPDFs: this.db.prepare(`
         SELECT p.*,
+               pr.name as project_name,
+               pr.conference as project_conference,
+               pr.submission_link as project_submission_link,
                (SELECT COUNT(*) FROM annotations WHERE pdf_id = p.id) as annotation_count
         FROM pdfs p
-        WHERE p.removed = 0 AND p.name LIKE ?
+        LEFT JOIN projects pr ON pr.id = p.project_id
+        WHERE p.removed = 0 AND (p.name LIKE ? OR pr.name LIKE ? OR pr.conference LIKE ?)
         ORDER BY p.updated_at DESC
       `),
       softDeletePDF: this.db.prepare(`UPDATE pdfs SET removed = 1, updated_at = datetime('now') WHERE id = ?`),
       restorePDF: this.db.prepare(`UPDATE pdfs SET removed = 0, updated_at = datetime('now') WHERE id = ?`),
       findRemovedPDFByPath: this.db.prepare(`SELECT * FROM pdfs WHERE path = ? AND removed = 1`),
+
+      // Projects
+      insertProject: this.db.prepare(`
+        INSERT INTO projects (id, name, conference, submission_link, created_at, updated_at)
+        VALUES (@id, @name, @conference, @submissionLink, datetime('now'), datetime('now'))
+      `),
+      getProject: this.db.prepare(`SELECT * FROM projects WHERE id = ?`),
+      updateProject: this.db.prepare(`
+        UPDATE projects
+        SET name = COALESCE(@name, name),
+            conference = @conference,
+            submission_link = @submissionLink,
+            updated_at = datetime('now')
+        WHERE id = @id
+      `),
+      deleteProject: this.db.prepare(`DELETE FROM projects WHERE id = ?`),
+      getPDFsForProject: this.db.prepare(`
+        SELECT p.*,
+               (SELECT COUNT(*) FROM annotations WHERE pdf_id = p.id) as annotation_count
+        FROM pdfs p
+        WHERE p.project_id = ? AND p.removed = 0
+        ORDER BY p.created_at ASC
+      `),
 
       // Annotations
       insertAnnotation: this.db.prepare(`
@@ -197,28 +297,97 @@ class DBManager {
       return this.getPDF(removed.id);
     }
 
+    const existing = this.db.prepare('SELECT * FROM pdfs WHERE path = ? AND removed = 0').get(pdfData.path);
+    if (existing) {
+      this.updatePDF(existing.id, { lastOpenedAt: new Date().toISOString() });
+      return this.getPDF(existing.id);
+    }
+
     const id = uuidv4();
     const data = {
       id,
+      projectId: pdfData.projectId || this.createProjectForPDF(pdfData).id,
       name: pdfData.name,
       path: pdfData.path,
-      pageCount: pdfData.pageCount || 0
+      pageCount: pdfData.pageCount || 0,
+      reviewDeadline: pdfData.reviewDeadline || null
     };
 
     try {
       this.stmts.insertPDF.run(data);
       return this.getPDF(id);
     } catch (error) {
-      // If PDF already exists (same path), return existing one
-      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        const existing = this.db.prepare('SELECT * FROM pdfs WHERE path = ?').get(pdfData.path);
-        if (existing) {
-          this.updatePDF(existing.id, { lastOpenedAt: new Date().toISOString() });
-          return this.getPDF(existing.id);
-        }
-      }
       throw error;
     }
+  }
+
+  createProjectForPDF(pdfData) {
+    const projectId = uuidv4();
+    const projectName = pdfData.projectName || pdfData.name;
+    this.stmts.insertProject.run({
+      id: projectId,
+      name: projectName,
+      conference: pdfData.conference || null,
+      submissionLink: pdfData.submissionLink || null
+    });
+    return this.getProject(projectId);
+  }
+
+  addProject(projectData) {
+    const id = uuidv4();
+    this.stmts.insertProject.run({
+      id,
+      name: projectData.name,
+      conference: projectData.conference || null,
+      submissionLink: projectData.submissionLink || null
+    });
+    return this.getProject(id);
+  }
+
+  getProject(id) {
+    const project = this.stmts.getProject.get(id);
+    if (!project) return null;
+    return {
+      ...project,
+      papers: this.stmts.getPDFsForProject.all(id)
+    };
+  }
+
+  updateProject(id, data) {
+    this.stmts.updateProject.run({
+      id,
+      name: data.name || null,
+      conference: data.conference ?? null,
+      submissionLink: data.submissionLink ?? null
+    });
+    return this.getProject(id);
+  }
+
+  getAllProjects() {
+    const rows = this.db.prepare(`
+      SELECT
+        pr.*,
+        COUNT(p.id) as paper_count,
+        COALESCE(SUM((SELECT COUNT(*) FROM annotations WHERE pdf_id = p.id)), 0) as annotation_count,
+        MIN(CASE WHEN p.review_deadline IS NOT NULL AND p.review_deadline != '' THEN p.review_deadline END) as next_deadline,
+        MAX(p.updated_at) as last_paper_updated_at,
+        SUM(CASE WHEN p.completed = 1 THEN 1 ELSE 0 END) as completed_paper_count
+      FROM projects pr
+      LEFT JOIN pdfs p ON p.project_id = pr.id AND p.removed = 0
+      GROUP BY pr.id
+      HAVING paper_count > 0
+      ORDER BY COALESCE(last_paper_updated_at, pr.updated_at) DESC
+    `).all();
+
+    return rows.map(project => {
+      const papers = this.stmts.getPDFsForProject.all(project.id);
+      return {
+        ...project,
+        papers,
+        completed: papers.length > 0 && papers.every(paper => paper.completed === 1) ? 1 : 0,
+        updated_at: project.last_paper_updated_at || project.updated_at
+      };
+    });
   }
 
   getAllPDFs() {
@@ -235,6 +404,12 @@ class DBManager {
       name: data.name || null,
       path: data.path || null,
       pageCount: data.pageCount || null,
+      reviewDeadline: data.reviewDeadline || null,
+      reviewDeadlineSet: Object.prototype.hasOwnProperty.call(data, 'reviewDeadline') ? 1 : 0,
+      reviewContent: data.reviewContent ?? null,
+      reviewContentSet: Object.prototype.hasOwnProperty.call(data, 'reviewContent') ? 1 : 0,
+      reviewUpdatedAt: data.reviewUpdatedAt ?? null,
+      reviewUpdatedAtSet: Object.prototype.hasOwnProperty.call(data, 'reviewUpdatedAt') ? 1 : 0,
       lastOpenedAt: data.lastOpenedAt || null
     });
     return this.getPDF(id);
@@ -252,7 +427,8 @@ class DBManager {
   }
 
   searchPDFs(query) {
-    return this.stmts.searchPDFs.all(`%${query}%`);
+    const pattern = `%${query}%`;
+    return this.stmts.searchPDFs.all(pattern, pattern, pattern);
   }
 
   markPDFCompleted(id, reviewDecision = null) {

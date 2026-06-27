@@ -195,7 +195,7 @@ html[data-theme="light"] .app-logo {
 }
 
 .drop-zone.drag-over::after {
-  content: 'Drop PDF here';
+  content: 'Drop PDF to create a project';
   position: absolute;
   top: 50%;
   left: 50%;
@@ -210,12 +210,34 @@ html[data-theme="light"] .app-logo {
 /* PDF Grid */
 .pdf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: var(--spacing-lg);
   overflow-y: auto;
   padding: var(--spacing-sm);
   flex: 1;
   align-content: start;
+}
+
+.project-first-paper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.project-first-paper strong {
+  min-width: 0;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Empty State */

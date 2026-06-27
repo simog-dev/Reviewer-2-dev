@@ -1,33 +1,26 @@
-// Card stack resizable panels model
-// Left panel (z-index 1) -> Center panel (z-index 2) -> Right panel (z-index 3)
-// Panels can close fully to 0 width; the resizer bar stays visible with a vertical label.
-// A static left-edge tab always shows "PDF" for the left panel.
+const MIN_CONTENT = 200;
+const RESIZER_W = 18;
+const LABEL_THRESHOLD = 4;
+const LEFT_TAB_W = 18;
 
-const MIN_CONTENT = 200; // Minimum internal content width (enables scroll below this)
-const RESIZER_W = 18;    // Resizer bar width
-const LABEL_THRESHOLD = 4; // Panel considered collapsed when width <= this
-const LEFT_TAB_W = 18;   // Static left-edge tab width (same as resizer)
+const DEFAULT_RATIOS = [0.34, 0.58, 0.78];
 
 export class ResizablePanels {
   constructor(options = {}) {
-    this.pdfPanel = options.pdfPanel;
-    this.annotationPanel = options.annotationPanel;
-    this.searchPanel = options.searchPanel;
-    this.resizer1 = options.resizer1;
-    this.resizer2 = options.resizer2;
     this.container = options.container;
-
+    this.panels = [
+      { key: 'pdf', element: options.pdfPanel, contentSelector: '.pdf-workspace, .pdf-viewer-container', label: 'PDF' },
+      { key: 'annotations', element: options.annotationPanel, contentSelector: '.annotation-panel-content', label: 'Annotations' },
+      { key: 'search', element: options.searchPanel, contentSelector: '.search-panel-content', label: 'Search' },
+      { key: 'review', element: options.reviewPanel, contentSelector: '.review-panel-content', label: 'Review' }
+    ];
+    this.resizers = [options.resizer1, options.resizer2, options.resizer3];
+    this.positions = [];
     this.isDragging = false;
-    this.activeDragging = null;
+    this.activeDraggingIndex = null;
     this.startX = 0;
-    this.startPos1 = 0;
-    this.startPos2 = 0;
-
-    // pos1 = right edge of left panel (= left edge of resizer1)
-    // pos2 = right edge of center panel content area
-    this.pos1 = 0;
-    this.pos2 = 0;
-
+    this.startPositions = [];
+    this.leftTab = null;
     this.onResize = options.onResize || (() => {});
 
     this.init();
@@ -43,22 +36,28 @@ export class ResizablePanels {
   }
 
   _setupLeftTab() {
-    // Create a static tab on the left edge that always says "PDF"
     const tab = document.createElement('div');
     tab.className = 'panel-left-tab';
     const label = document.createElement('span');
     label.className = 'resizer-label';
     label.textContent = 'PDF';
-    label.style.display = '';
     tab.appendChild(label);
     this.container.appendChild(tab);
     this.leftTab = tab;
   }
 
+  _setupResizerLabels() {
+    this.resizers.forEach((resizer) => {
+      const label = document.createElement('span');
+      label.className = 'resizer-label';
+      resizer.appendChild(label);
+    });
+  }
+
   _initPositions() {
-    const w = this.container.clientWidth;
-    this.pos1 = Math.round(w * 0.4);
-    this.pos2 = Math.round(w * 0.7);
+    const available = this._availableWidth();
+    this.positions = DEFAULT_RATIOS.map((ratio) => Math.round(available * ratio));
+    this._clampPositions();
     this._applyPositions();
   }
 
@@ -66,217 +65,200 @@ export class ResizablePanels {
     return this.container.clientWidth;
   }
 
-  _clampPositions() {
-    const w = this._containerWidth();
-    // Layout: [leftTab 18][left: pos1][R1: 18][center: pos2-pos1][R2: 18][right: rest]
-    // Total fixed = LEFT_TAB_W + 2*RESIZER_W
-    // pos1 >= 0, pos2 >= pos1, right >= 0
-    const maxPos2 = w - LEFT_TAB_W - 2 * RESIZER_W;
+  _availableWidth() {
+    return Math.max(0, this._containerWidth() - LEFT_TAB_W - (this.resizers.length * RESIZER_W));
+  }
 
-    this.pos1 = Math.max(0, this.pos1);
-    this.pos2 = Math.max(this.pos1, this.pos2);
-    this.pos2 = Math.min(maxPos2, this.pos2);
-    this.pos1 = Math.min(this.pos1, this.pos2);
+  _maxPosition(index) {
+    return this._availableWidth();
+  }
+
+  _clampPositions() {
+    const max = this._availableWidth();
+
+    if (!Array.isArray(this.positions) || this.positions.length !== this.resizers.length) {
+      this.positions = DEFAULT_RATIOS.map((ratio) => Math.round(max * ratio));
+    }
+
+    for (let i = 0; i < this.positions.length; i += 1) {
+      const min = i === 0 ? 0 : this.positions[i - 1];
+      this.positions[i] = Math.max(min, Math.min(max, this.positions[i]));
+    }
   }
 
   _applyPositions() {
-    const w = this._containerWidth();
+    const available = this._availableWidth();
+    const widths = [];
+    let cursor = LEFT_TAB_W;
+    let previousBoundary = 0;
 
-    // Layout: [leftTab LEFT_TAB_W][leftPanel pos1][resizer1 RESIZER_W][centerPanel pos2-pos1][resizer2 RESIZER_W][rightPanel rest]
-    const base = LEFT_TAB_W; // everything shifted right by the left tab
-
-    const leftWidth = this.pos1;
-    const leftLeft = base;
-
-    const r1Left = base + this.pos1;
-
-    const centerWidth = Math.max(0, this.pos2 - this.pos1);
-    const centerLeft = r1Left + RESIZER_W;
-
-    const r2Left = centerLeft + centerWidth;
-
-    const rightLeft = r2Left + RESIZER_W;
-    const rightWidth = Math.max(0, w - rightLeft);
-
-    // Left tab (static)
     this.leftTab.style.left = '0';
 
-    // Left panel
-    this.pdfPanel.style.left = `${leftLeft}px`;
-    this.pdfPanel.style.width = `${leftWidth}px`;
+    this.panels.forEach((panel, index) => {
+      const boundary = index < this.positions.length ? this.positions[index] : available;
+      const panelWidth = Math.max(0, boundary - previousBoundary);
+      widths.push(panelWidth);
 
-    // Resizer1
-    this.resizer1.style.left = `${r1Left}px`;
+      panel.element.style.left = `${cursor}px`;
+      panel.element.style.width = `${panelWidth}px`;
+      this._updatePanelOverflow(panel.element, panel.contentSelector, panelWidth);
+      panel.element.classList.toggle('collapsed', panelWidth <= LABEL_THRESHOLD);
 
-    // Center panel
-    this.annotationPanel.style.left = `${centerLeft}px`;
-    this.annotationPanel.style.width = `${centerWidth}px`;
+      cursor += panelWidth;
+      previousBoundary = boundary;
 
-    // Resizer2
-    this.resizer2.style.left = `${r2Left}px`;
-
-    // Right panel
-    this.searchPanel.style.left = `${rightLeft}px`;
-    this.searchPanel.style.width = `${rightWidth}px`;
-
-    // Overflow scrolling for narrow panels
-    this._updatePanelOverflow(this.pdfPanel, leftWidth);
-    this._updatePanelOverflow(this.annotationPanel, centerWidth);
-    this._updatePanelOverflow(this.searchPanel, rightWidth);
-
-    // Collapsed state & resizer labels
-    const leftCollapsed = leftWidth <= LABEL_THRESHOLD;
-    const centerCollapsed = centerWidth <= LABEL_THRESHOLD;
-    const rightCollapsed = rightWidth <= LABEL_THRESHOLD;
-
-    this.pdfPanel.classList.toggle('collapsed', leftCollapsed);
-    this.annotationPanel.classList.toggle('collapsed', centerCollapsed);
-    this.searchPanel.classList.toggle('collapsed', rightCollapsed);
-
-    // Resizer labels are always visible:
-    // - leftTab always shows "PDF"
-    // - resizer1 always shows "Annotations" (center panel's left edge)
-    // - resizer2 always shows "Search" (right panel's left edge)
-    this._updateResizerLabel(this.resizer1, 'Annotations');
-    this._updateResizerLabel(this.resizer2, 'Search');
+      if (index < this.resizers.length) {
+        this.resizers[index].style.left = `${cursor}px`;
+        this._updateResizerLabel(this.resizers[index], this.panels[index + 1].label);
+        cursor += RESIZER_W;
+      }
+    });
   }
 
-  _updatePanelOverflow(panel, visibleWidth) {
-    const content = panel.querySelector('.pdf-workspace, .pdf-viewer-container, .annotation-panel-content, .search-panel-content');
+  _updatePanelOverflow(panel, contentSelector, visibleWidth) {
+    const content = panel.querySelector(contentSelector);
+    const panelKey = this.panels.find(item => item.element === panel)?.key;
+
     if (visibleWidth <= LABEL_THRESHOLD) {
       panel.style.overflowX = 'hidden';
       panel.classList.remove('narrow-scroll');
       if (content) content.style.minWidth = '';
-    } else if (visibleWidth < MIN_CONTENT) {
-      panel.style.overflowX = 'auto';
+      return;
+    }
+
+    if (visibleWidth < MIN_CONTENT) {
+      panel.style.overflowX = panelKey === 'search' ? 'hidden' : 'auto';
       panel.classList.add('narrow-scroll');
       if (content) content.style.minWidth = `${MIN_CONTENT}px`;
-    } else {
-      panel.style.overflowX = 'hidden';
-      panel.classList.remove('narrow-scroll');
-      if (content) content.style.minWidth = '';
+      return;
     }
-  }
 
-  _setupResizerLabels() {
-    for (const resizer of [this.resizer1, this.resizer2]) {
-      const label = document.createElement('span');
-      label.className = 'resizer-label';
-      resizer.appendChild(label);
-    }
+    panel.style.overflowX = 'hidden';
+    panel.classList.remove('narrow-scroll');
+    if (content) content.style.minWidth = '';
   }
 
   _updateResizerLabel(resizer, text) {
     const label = resizer.querySelector('.resizer-label');
     if (!label) return;
-    if (text) {
-      label.textContent = text;
-      label.style.display = 'block';
-      resizer.classList.add('has-label');
-    } else {
-      label.textContent = '';
-      label.style.display = 'none';
-      resizer.classList.remove('has-label');
-    }
+    label.textContent = text;
+    label.style.display = 'block';
+    resizer.classList.add('has-label');
   }
 
   loadSavedLayout() {
-    window.api.getSetting('panelLayout').then(layout => {
-      if (layout && layout.pos1Ratio != null && layout.pos2Ratio != null) {
-        const w = this._containerWidth();
-        this.pos1 = Math.round(layout.pos1Ratio * w);
-        this.pos2 = Math.round(layout.pos2Ratio * w);
-        this._clampPositions();
+    window.api.getSetting('panelLayout').then((layout) => {
+      const available = this._availableWidth();
+      if (!layout) return;
 
-        // Ensure both annotation and search panels are open on load.
-        // If either is collapsed, reset to default proportions (40/30/30).
-        const maxPos2 = w - LEFT_TAB_W - 2 * RESIZER_W;
-        const centerWidth = this.pos2 - this.pos1;
-        const rightWidth = maxPos2 - this.pos2;
-
-        if (centerWidth <= LABEL_THRESHOLD || rightWidth <= LABEL_THRESHOLD) {
-          this.pos1 = Math.round(maxPos2 * 0.4);
-          this.pos2 = Math.round(maxPos2 * 0.7);
-        }
-
-        this._clampPositions();
-        this._applyPositions();
+      if (layout.pos1Ratio != null && layout.pos2Ratio != null && layout.pos3Ratio != null) {
+        this.positions = [
+          Math.round(layout.pos1Ratio * available),
+          Math.round(layout.pos2Ratio * available),
+          Math.round(layout.pos3Ratio * available)
+        ];
+      } else if (layout.pos1Ratio != null && layout.pos2Ratio != null) {
+        this.positions = [
+          Math.round(layout.pos1Ratio * available),
+          Math.round(layout.pos2Ratio * available),
+          Math.round(DEFAULT_RATIOS[2] * available)
+        ];
+      } else {
+        return;
       }
+
+      this._clampPositions();
+      this._ensureSecondaryPanelsVisible();
+      this._applyPositions();
     }).catch(() => {});
   }
 
   saveLayout() {
-    const w = this._containerWidth();
+    const available = this._availableWidth() || 1;
     window.api.setSetting('panelLayout', {
-      pos1Ratio: this.pos1 / w,
-      pos2Ratio: this.pos2 / w
+      pos1Ratio: this.positions[0] / available,
+      pos2Ratio: this.positions[1] / available,
+      pos3Ratio: this.positions[2] / available
     }).catch(() => {});
   }
 
+  _ensureSecondaryPanelsVisible() {
+    const widths = [
+      this.positions[0],
+      this.positions[1] - this.positions[0],
+      this.positions[2] - this.positions[1],
+      this._availableWidth() - this.positions[2]
+    ];
+
+    if (widths.slice(1).some((width) => width <= LABEL_THRESHOLD)) {
+      const available = this._availableWidth();
+      this.positions = DEFAULT_RATIOS.map((ratio) => Math.round(available * ratio));
+      this._clampPositions();
+    }
+  }
+
   setupResizers() {
-    const startDrag = (e, resizerEl, activeName) => {
-      e.preventDefault();
+    const startDrag = (event, index) => {
+      event.preventDefault();
       this.isDragging = true;
-      this.activeDragging = activeName;
-      this.startX = e.clientX;
-      this.startPos1 = this.pos1;
-      this.startPos2 = this.pos2;
-      resizerEl.classList.add('dragging');
-      resizerEl.setPointerCapture(e.pointerId);
+      this.activeDraggingIndex = index;
+      this.startX = event.clientX;
+      this.startPositions = [...this.positions];
+      this.resizers[index].classList.add('dragging');
+      this.resizers[index].setPointerCapture(event.pointerId);
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     };
 
-    const onMove = (e) => {
-      if (!this.isDragging) return;
+    const onMove = (event) => {
+      if (!this.isDragging || this.activeDraggingIndex == null) return;
 
-      const delta = e.clientX - this.startX;
-      const w = this._containerWidth();
-      const maxPos2 = w - LEFT_TAB_W - 2 * RESIZER_W;
+      const delta = event.clientX - this.startX;
+      const index = this.activeDraggingIndex;
+      const max = this._availableWidth();
+      const nextPositions = [...this.positions];
+      nextPositions[index] = Math.max(0, Math.min(max, this.startPositions[index] + delta));
 
-      if (this.activeDragging === 'resizer1') {
-        let newPos1 = this.startPos1 + delta;
-        newPos1 = Math.max(0, Math.min(maxPos2, newPos1));
-        this.pos1 = newPos1;
-        if (this.pos2 < this.pos1) {
-          this.pos2 = this.pos1;
+      if (delta > 0) {
+        for (let i = index + 1; i < nextPositions.length; i += 1) {
+          if (nextPositions[i] < nextPositions[i - 1]) {
+            nextPositions[i] = nextPositions[i - 1];
+          }
         }
-        this.pos2 = Math.min(maxPos2, this.pos2);
-      } else {
-        let newPos2 = this.startPos2 + delta;
-        newPos2 = Math.max(0, Math.min(maxPos2, newPos2));
-        this.pos2 = newPos2;
-        if (this.pos1 > this.pos2) {
-          this.pos1 = this.pos2;
+      } else if (delta < 0) {
+        for (let i = index - 1; i >= 0; i -= 1) {
+          if (nextPositions[i] > nextPositions[i + 1]) {
+            nextPositions[i] = nextPositions[i + 1];
+          }
         }
-        this.pos1 = Math.max(0, this.pos1);
       }
 
+      this.positions = nextPositions;
+      this._clampPositions();
       this._applyPositions();
       this.onResize();
     };
 
     const endDrag = () => {
-      if (this.isDragging) {
-        this.isDragging = false;
-        if (this.activeDragging === 'resizer1') {
-          this.resizer1.classList.remove('dragging');
-        } else if (this.activeDragging === 'resizer2') {
-          this.resizer2.classList.remove('dragging');
-        }
-        this.activeDragging = null;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        this.saveLayout();
+      if (!this.isDragging) return;
+
+      if (this.activeDraggingIndex != null) {
+        this.resizers[this.activeDraggingIndex].classList.remove('dragging');
       }
+
+      this.isDragging = false;
+      this.activeDraggingIndex = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      this.saveLayout();
     };
 
-    this.resizer1.addEventListener('pointerdown', (e) => startDrag(e, this.resizer1, 'resizer1'));
-    this.resizer2.addEventListener('pointerdown', (e) => startDrag(e, this.resizer2, 'resizer2'));
-    this.resizer1.addEventListener('pointermove', onMove);
-    this.resizer2.addEventListener('pointermove', onMove);
-    this.resizer1.addEventListener('pointerup', endDrag);
-    this.resizer2.addEventListener('pointerup', endDrag);
+    this.resizers.forEach((resizer, index) => {
+      resizer.addEventListener('pointerdown', (event) => startDrag(event, index));
+      resizer.addEventListener('pointermove', onMove);
+      resizer.addEventListener('pointerup', endDrag);
+    });
+
     document.addEventListener('mouseup', endDrag);
   }
 
@@ -289,84 +271,45 @@ export class ResizablePanels {
     ro.observe(this.container);
   }
 
-  // No-ops for backward compatibility with keyboard shortcuts
   togglePdf() {}
   toggleAnnotations() {}
   toggleSearch() {}
+  toggleReview() {}
   restorePanels() {}
 
-  /**
-   * Ensure the annotation (center) panel is visible.
-   * If collapsed, expand it by shifting pos1 left (stealing from PDF panel),
-   * using the same animated approach as expandSearchPanel.
-   * @param {number} targetWidth - Target width in pixels (default 350)
-   * @param {number} duration - Animation duration in ms (default 300)
-   */
   ensureAnnotationPanelOpen(targetWidth = 350, duration = 300) {
-    const centerWidth = this.pos2 - this.pos1;
+    const currentWidth = this.positions[1] - this.positions[0];
+    if (currentWidth >= targetWidth) return;
 
-    // Already wide enough
-    if (centerWidth >= targetWidth) return;
-
-    // Shift pos1 left to create space for annotations
-    const neededShift = targetWidth - centerWidth;
-    const targetPos1 = Math.max(0, this.pos1 - neededShift);
-
-    // Animate (same pattern as expandSearchPanel)
-    const startPos1 = this.pos1;
-    const startTime = performance.now();
-
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      this.pos1 = startPos1 + (targetPos1 - startPos1) * eased;
-      this._clampPositions();
-      this._applyPositions();
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        this.saveLayout();
-        this.onResize();
-      }
-    };
-
-    requestAnimationFrame(animate);
+    const targetPos1 = Math.max(0, this.positions[1] - targetWidth);
+    this._animatePosition(0, targetPos1, duration);
   }
 
-  /**
-   * Expand the search panel to a reasonable width with smooth animation
-   * @param {number} targetWidth - Target width in pixels (default 400)
-   * @param {number} duration - Animation duration in ms (default 300)
-   */
   expandSearchPanel(targetWidth = 400, duration = 300) {
-    const w = this._containerWidth();
-    const rightLeft = LEFT_TAB_W + this.pos1 + RESIZER_W + (this.pos2 - this.pos1) + RESIZER_W;
-    const currentRightWidth = w - rightLeft;
+    const currentWidth = this.positions[2] - this.positions[1];
+    if (currentWidth >= targetWidth) return;
 
-    // If already wide enough, do nothing
-    if (currentRightWidth >= targetWidth) return;
+    const targetBoundary = Math.min(this._availableWidth(), this.positions[1] + targetWidth);
+    this._animatePosition(2, targetBoundary, duration);
+  }
 
-    // Calculate how much we need to shift pos2 left
-    const neededShift = targetWidth - currentRightWidth;
-    const targetPos2 = Math.max(this.pos1, this.pos2 - neededShift);
+  ensureReviewPanelOpen(targetWidth = 420, duration = 300) {
+    const currentWidth = this._availableWidth() - this.positions[2];
+    if (currentWidth >= targetWidth) return;
 
-    // Animate
-    const startPos2 = this.pos2;
+    const targetPos3 = Math.max(this.positions[1], this._availableWidth() - targetWidth);
+    this._animatePosition(2, targetPos3, duration);
+  }
+
+  _animatePosition(index, target, duration) {
+    const start = this.positions[index];
     const startTime = performance.now();
 
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic
+    const animate = (time) => {
+      const progress = Math.min((time - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
 
-      this.pos2 = startPos2 + (targetPos2 - startPos2) * eased;
+      this.positions[index] = start + (target - start) * eased;
       this._clampPositions();
       this._applyPositions();
 

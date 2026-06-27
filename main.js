@@ -7,6 +7,15 @@ const Database = require('./src/database/db');
 let mainWindow;
 let db;
 
+function escapeHtml(text = '') {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Get user data path for database storage
 const userDataPath = app.getPath('userData');
 const dbPath = path.join(userDataPath, 'database.sqlite');
@@ -279,6 +288,23 @@ ipcMain.handle('db:markPDFIncomplete', async (event, id) => {
   return db.markPDFIncomplete(id);
 });
 
+// Database Operations - Projects
+ipcMain.handle('db:addProject', async (event, projectData) => {
+  return db.addProject(projectData);
+});
+
+ipcMain.handle('db:getAllProjects', async () => {
+  return db.getAllProjects();
+});
+
+ipcMain.handle('db:getProject', async (event, id) => {
+  return db.getProject(id);
+});
+
+ipcMain.handle('db:updateProject', async (event, id, data) => {
+  return db.updateProject(id, data);
+});
+
 // Database Operations - Annotations
 ipcMain.handle('db:addAnnotation', async (event, annotationData) => {
   return db.addAnnotation(annotationData);
@@ -366,6 +392,86 @@ ipcMain.handle('export:saveFile', async (event, { defaultName, filters, content 
   } catch (error) {
     console.error('Error saving file:', error);
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('export:reviewPDF', async (event, { defaultName, title, html }) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: defaultName,
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+  });
+
+  if (result.canceled) {
+    return { success: false, canceled: true };
+  }
+
+  let exportWindow;
+
+  try {
+    exportWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        sandbox: false
+      }
+    });
+
+    const exportHtml = `<!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>${escapeHtml(title || 'Review')}</title>
+          <style>
+            body {
+              font-family: Georgia, "Times New Roman", serif;
+              color: #111827;
+              margin: 40px 48px;
+              line-height: 1.6;
+              font-size: 12pt;
+            }
+            h1 {
+              font-size: 20pt;
+              margin: 0 0 24px;
+            }
+            p, ul, ol, blockquote {
+              margin: 0 0 14px;
+            }
+            blockquote {
+              border-left: 3px solid #cbd5e1;
+              padding-left: 16px;
+              color: #334155;
+            }
+            img {
+              max-width: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(title || 'Review')}</h1>
+          ${html || '<p></p>'}
+        </body>
+      </html>`;
+
+    await exportWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(exportHtml)}`);
+    const pdfBuffer = await exportWindow.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: {
+        top: 0.5,
+        bottom: 0.5,
+        left: 0.5,
+        right: 0.5
+      }
+    });
+
+    fs.writeFileSync(result.filePath, pdfBuffer);
+    return { success: true, filePath: result.filePath };
+  } catch (error) {
+    console.error('Error exporting review PDF:', error);
+    return { success: false, error: error.message };
+  } finally {
+    if (exportWindow && !exportWindow.isDestroyed()) {
+      exportWindow.close();
+    }
   }
 });
 

@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('api', {
   markPDFCompleted: (id, reviewDecision) => ipcRenderer.invoke('db:markPDFCompleted', id, reviewDecision),
   markPDFIncomplete: (id) => ipcRenderer.invoke('db:markPDFIncomplete', id),
 
+  // Database Operations - Projects
+  addProject: (projectData) => ipcRenderer.invoke('db:addProject', projectData),
+  getAllProjects: () => ipcRenderer.invoke('db:getAllProjects'),
+  getProject: (id) => ipcRenderer.invoke('db:getProject', id),
+  updateProject: (id, data) => ipcRenderer.invoke('db:updateProject', id, data),
+
   // Database Operations - Annotations
   addAnnotation: (annotationData) => ipcRenderer.invoke('db:addAnnotation', annotationData),
   getAnnotationsForPDF: (pdfId) => ipcRenderer.invoke('db:getAnnotationsForPDF', pdfId),
@@ -48,6 +54,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Export Operations
   saveFile: (options) => ipcRenderer.invoke('export:saveFile', options),
+  exportReviewPDF: (options) => ipcRenderer.invoke('export:reviewPDF', options),
   openImportFile: () => ipcRenderer.invoke('import:openFile'),
 
   // Settings

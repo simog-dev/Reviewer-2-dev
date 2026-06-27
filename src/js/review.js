@@ -3,7 +3,7 @@ import '../components/category-filter.js';
 import { PDFViewer } from './pdf-viewer.js';
 import { AnnotationManager } from './annotation-manager.js';
 import { ResizablePanels } from './resizable-panels.js';
-import { getCategoryIcon, escapeHtml } from './utils.js';
+import { getCategoryIcon, escapeHtml, debounce, formatRelativeTime } from './utils.js';
 import { createLLMProvider } from './llm-provider.js';
 import ThemeManager from './theme-manager.js';
 
@@ -24,6 +24,15 @@ let clickedHighlight = null;
 let citationPopupTimeout = null;
 let currentCitationRefs = [];
 let citationPopupLocked = false; // Prevents popup from closing while hovering
+let reviewLastSavedContent = '';
+let reviewLastSavedAt = null;
+let reviewStatusTimer = null;
+let reviewSaveToken = 0;
+let reviewHistory = [];
+let reviewRedoStack = [];
+let isApplyingReviewHistory = false;
+
+const REVIEW_HISTORY_LIMIT = 6;
 
 // DOM Elements
 const pdfTitle = document.getElementById('pdf-title');
@@ -41,9 +50,9 @@ const pdfThumbnailList = document.getElementById('pdf-thumbnail-list');
 const btnBack = document.getElementById('btn-back');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const sortSelect = document.getElementById('sort-select');
+const btnImport = document.getElementById('btn-import');
 const btnExport = document.getElementById('btn-export');
 const exportMenu = document.getElementById('export-menu');
-const btnImport = document.getElementById('btn-import');
 
 const annotationList = document.getElementById('annotation-list');
 const annotationListEmpty = document.getElementById('annotation-list-empty');
@@ -118,6 +127,21 @@ const pdfSearchCount = document.getElementById('pdf-search-count');
 const pdfSearchPrev = document.getElementById('pdf-search-prev');
 const pdfSearchNext = document.getElementById('pdf-search-next');
 const pdfSearchClose = document.getElementById('pdf-search-close');
+const reviewEditor = document.getElementById('review-editor');
+const reviewSaveStatus = document.getElementById('review-save-status');
+const reviewUndoBtn = document.getElementById('review-undo-btn');
+const reviewRedoBtn = document.getElementById('review-redo-btn');
+const reviewExportBtn = document.getElementById('btn-review-export');
+const reviewExportMenu = document.getElementById('review-export-menu');
+const reviewEditorToolbar = document.getElementById('review-editor-toolbar');
+
+const scheduleReviewSave = debounce(() => {
+  saveReviewContent();
+}, 900);
+
+const scheduleReviewSnapshot = debounce(() => {
+  recordReviewSnapshot();
+}, 350);
 
 // Initialize
 async function init() {
@@ -149,8 +173,10 @@ async function init() {
     pdfPanel: document.getElementById('pdf-panel'),
     annotationPanel: document.getElementById('annotation-panel'),
     searchPanel: document.getElementById('search-panel'),
+    reviewPanel: document.getElementById('review-panel'),
     resizer1: document.getElementById('panel-resizer-1'),
     resizer2: document.getElementById('panel-resizer-2'),
+    resizer3: document.getElementById('panel-resizer-3'),
     container: document.querySelector('.main-content'),
     onResize: () => {
       // Re-render search highlights after panel resize
@@ -171,6 +197,7 @@ async function init() {
 
   await loadAnnotations();
   await loadHighlights();
+  initializeReviewEditor();
   await checkLLMReady();
 
   setupEventListeners();
@@ -977,7 +1004,183 @@ async function changeCategoryFromMenu(categoryId, annotationId) {
   await annotationManager.updateAnnotation(annotationId, { categoryId });
 }
 
-// Export functions
+function initializeReviewEditor() {
+  const initialContent = normalizeReviewHtml(pdfData?.review_content || '');
+  reviewEditor.innerHTML = initialContent;
+  reviewLastSavedContent = initialContent;
+  reviewLastSavedAt = pdfData?.review_updated_at || null;
+  reviewHistory = [initialContent];
+  reviewRedoStack = [];
+  updateReviewHistoryButtons();
+  updateReviewSaveStatus('saved');
+
+  if (reviewStatusTimer) {
+    clearInterval(reviewStatusTimer);
+  }
+
+  reviewStatusTimer = setInterval(() => {
+    if (!reviewSaveStatus.classList.contains('is-saving') && !reviewSaveStatus.classList.contains('is-dirty')) {
+      updateReviewSaveStatus('saved');
+    }
+  }, 30000);
+}
+
+function normalizeReviewHtml(html) {
+  const normalized = String(html || '').trim();
+  return normalized === '<br>' ? '' : normalized;
+}
+
+function getReviewEditorHtml() {
+  return normalizeReviewHtml(reviewEditor.innerHTML);
+}
+
+function getReviewEditorText() {
+  return reviewEditor.innerText.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function formatReviewTextAsHtml(text) {
+  return String(text || '')
+    .trim()
+    .split(/\n\s*\n/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
+function formatAbsoluteDateTime(dateValue) {
+  const date = typeof dateValue === 'string'
+    ? new Date(dateValue.endsWith('Z') || dateValue.includes('+') ? dateValue : `${dateValue}Z`)
+    : dateValue;
+
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function getReviewSavedLabel() {
+  if (!reviewLastSavedAt) {
+    return 'Not saved yet';
+  }
+
+  const savedAt = typeof reviewLastSavedAt === 'string'
+    ? new Date(reviewLastSavedAt.endsWith('Z') || reviewLastSavedAt.includes('+') ? reviewLastSavedAt : `${reviewLastSavedAt}Z`)
+    : reviewLastSavedAt;
+  const diffMs = Date.now() - savedAt.getTime();
+
+  if (diffMs < 10 * 60 * 1000) {
+    return `Saved ${formatRelativeTime(savedAt)}`;
+  }
+
+  return `Saved at ${formatAbsoluteDateTime(savedAt)}`;
+}
+
+function updateReviewSaveStatus(state = 'saved') {
+  reviewSaveStatus.classList.remove('is-saving', 'is-dirty');
+
+  if (state === 'saving') {
+    reviewSaveStatus.textContent = 'Saving...';
+    reviewSaveStatus.classList.add('is-saving');
+    return;
+  }
+
+  if (state === 'dirty') {
+    reviewSaveStatus.textContent = 'Unsaved changes';
+    reviewSaveStatus.classList.add('is-dirty');
+    return;
+  }
+
+  reviewSaveStatus.textContent = getReviewSavedLabel();
+}
+
+function recordReviewSnapshot() {
+  if (isApplyingReviewHistory) return;
+
+  const html = getReviewEditorHtml();
+  const lastSnapshot = reviewHistory[reviewHistory.length - 1];
+  if (html === lastSnapshot) return;
+
+  reviewHistory.push(html);
+  if (reviewHistory.length > REVIEW_HISTORY_LIMIT) {
+    reviewHistory = reviewHistory.slice(reviewHistory.length - REVIEW_HISTORY_LIMIT);
+  }
+  reviewRedoStack = [];
+  updateReviewHistoryButtons();
+}
+
+function updateReviewHistoryButtons() {
+  reviewUndoBtn.disabled = reviewHistory.length <= 1;
+  reviewRedoBtn.disabled = reviewRedoStack.length === 0;
+}
+
+function applyReviewHistoryState(html) {
+  isApplyingReviewHistory = true;
+  reviewEditor.innerHTML = html;
+  isApplyingReviewHistory = false;
+  updateReviewFormattingState();
+  updateReviewSaveStatus(getReviewEditorHtml() === reviewLastSavedContent ? 'saved' : 'dirty');
+  scheduleReviewSave();
+}
+
+function undoReviewChange() {
+  if (reviewHistory.length <= 1) return;
+  const current = reviewHistory.pop();
+  reviewRedoStack.push(current);
+  applyReviewHistoryState(reviewHistory[reviewHistory.length - 1]);
+  updateReviewHistoryButtons();
+}
+
+function redoReviewChange() {
+  if (reviewRedoStack.length === 0) return;
+  const next = reviewRedoStack.pop();
+  reviewHistory.push(next);
+  applyReviewHistoryState(next);
+  updateReviewHistoryButtons();
+}
+
+async function saveReviewContent(force = false) {
+  const html = getReviewEditorHtml();
+  if (!force && html === reviewLastSavedContent) {
+    updateReviewSaveStatus('saved');
+    return;
+  }
+
+  updateReviewSaveStatus('saving');
+  const currentToken = ++reviewSaveToken;
+
+  try {
+    const timestamp = new Date().toISOString();
+    const updatedPdf = await window.api.updatePDF(pdfId, {
+      reviewContent: html,
+      reviewUpdatedAt: timestamp
+    });
+
+    if (currentToken !== reviewSaveToken) return;
+
+    pdfData = updatedPdf;
+    reviewLastSavedContent = normalizeReviewHtml(updatedPdf.review_content || html);
+    reviewLastSavedAt = updatedPdf.review_updated_at || timestamp;
+    updateReviewSaveStatus('saved');
+  } catch (error) {
+    console.error('Review autosave failed:', error);
+    reviewSaveStatus.textContent = 'Save failed';
+    reviewSaveStatus.classList.remove('is-saving');
+    reviewSaveStatus.classList.add('is-dirty');
+  }
+}
+
+function handleReviewEditorInput() {
+  updateReviewSaveStatus(getReviewEditorHtml() === reviewLastSavedContent ? 'saved' : 'dirty');
+  scheduleReviewSnapshot();
+  scheduleReviewSave();
+}
+
+function toggleReviewExportMenu() {
+  reviewExportMenu.classList.toggle('active');
+}
+
 function toggleExportMenu() {
   exportMenu.classList.toggle('active');
 }
@@ -986,7 +1189,9 @@ async function exportAnnotations(format) {
   exportMenu.classList.remove('active');
 
   try {
-    let content, defaultName, filters;
+    let content;
+    let defaultName;
+    let filters;
 
     if (format === 'json') {
       content = await annotationManager.exportAsJSON();
@@ -1009,6 +1214,69 @@ async function exportAnnotations(format) {
     console.error('Export error:', error);
     showToast('Export failed', 'error');
   }
+}
+
+async function exportReview(format) {
+  reviewExportMenu.classList.remove('active');
+
+  const textContent = getReviewEditorText();
+  const htmlContent = getReviewEditorHtml();
+
+  if (!textContent && !htmlContent) {
+    showToast('Review is empty', 'error');
+    return;
+  }
+
+  const baseName = pdfData.name.replace(/\.pdf$/i, '');
+
+  try {
+    if (format === 'txt') {
+      const result = await window.api.saveFile({
+        defaultName: `${baseName}-review.txt`,
+        filters: [{ name: 'Text Files', extensions: ['txt'] }],
+        content: textContent
+      });
+
+      if (result.success) {
+        showToast(`Exported to ${result.filePath}`, 'success');
+      } else if (!result.canceled) {
+        showToast('Export failed', 'error');
+      }
+      return;
+    }
+
+    const result = await window.api.exportReviewPDF({
+      defaultName: `${baseName}-review.pdf`,
+      title: `${baseName} Review`,
+      html: htmlContent
+    });
+
+    if (result.success) {
+      showToast(`Exported to ${result.filePath}`, 'success');
+    } else if (!result.canceled) {
+      showToast('Export failed', 'error');
+    }
+  } catch (error) {
+    console.error('Review export error:', error);
+    showToast('Export failed', 'error');
+  }
+}
+
+function updateReviewFormattingState() {
+  reviewEditorToolbar.querySelectorAll('.review-tool-btn[data-command]').forEach((button) => {
+    const command = button.dataset.command;
+    const toggleCommands = new Set(['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList']);
+    if (!toggleCommands.has(command)) {
+      button.classList.remove('active');
+      return;
+    }
+
+    try {
+      button.classList.toggle('active', document.queryCommandState(command));
+    } catch {
+      button.classList.remove('active');
+    }
+  });
 }
 
 async function importAnnotations() {
@@ -1174,11 +1442,7 @@ function showImportConfirmationToast(importResult, message) {
 // Check if LLM is configured (API key set)
 async function checkLLMReady() {
   const apiKey = await window.api.getSetting('llm_api_key');
-  if (apiKey) {
-    btnGenerateReview.disabled = false;
-  } else {
-    btnGenerateReview.disabled = true;
-  }
+  btnGenerateReview.disabled = !apiKey;
 }
 
 // Generate review using LLM
@@ -1204,20 +1468,14 @@ async function generateReview() {
 
     const llmProvider = createLLMProvider(provider, { apiKey, model, temperature, prompt });
     const reviewText = await llmProvider.generateReview(annotations, pdfData.name);
-
-    // Save as .txt file
-    const defaultName = `${pdfData.name.replace('.pdf', '')}-review.txt`;
-    const result = await window.api.saveFile({
-      defaultName,
-      filters: [{ name: 'Text Files', extensions: ['txt'] }],
-      content: reviewText
-    });
-
-    if (result.success) {
-      showToast('Review generated and saved', 'success');
-    } else if (!result.canceled) {
-      showToast('Failed to save review file', 'error');
-    }
+    const generatedHtml = formatReviewTextAsHtml(reviewText);
+    reviewEditor.innerHTML = generatedHtml;
+    resizablePanels.ensureReviewPanelOpen(460, 260);
+    recordReviewSnapshot();
+    updateReviewFormattingState();
+    await saveReviewContent(true);
+    reviewEditor.focus();
+    showToast('Review generated', 'success');
   } catch (error) {
     console.error('Generate review error:', error);
     showToast('Review generation failed: ' + error.message, 'error');
@@ -1765,14 +2023,46 @@ function setupEventListeners() {
     window.api.navigateToSettings();
   });
 
-  // Export
-  btnExport.addEventListener('click', toggleExportMenu);
   btnImport.addEventListener('click', importAnnotations);
-
+  btnExport.addEventListener('click', toggleExportMenu);
   exportMenu.querySelectorAll('.export-menu-item').forEach(item => {
     item.addEventListener('click', () => {
       exportAnnotations(item.dataset.format);
     });
+  });
+  reviewExportBtn.addEventListener('click', toggleReviewExportMenu);
+  reviewExportMenu.querySelectorAll('.export-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      exportReview(item.dataset.format);
+    });
+  });
+
+  reviewEditor.addEventListener('input', handleReviewEditorInput);
+  reviewEditor.addEventListener('focus', updateReviewFormattingState);
+  reviewUndoBtn.addEventListener('click', undoReviewChange);
+  reviewRedoBtn.addEventListener('click', redoReviewChange);
+
+  reviewEditorToolbar.addEventListener('click', (e) => {
+    const button = e.target.closest('.review-tool-btn');
+    if (!button) return;
+
+    reviewEditor.focus();
+
+    if (button.dataset.command) {
+      document.execCommand(button.dataset.command, false, null);
+    } else if (button.dataset.block) {
+      document.execCommand('formatBlock', false, button.dataset.block);
+    }
+
+    updateReviewFormattingState();
+    handleReviewEditorInput();
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const selection = document.getSelection();
+    if (!selection || !selection.anchorNode) return;
+    if (!reviewEditor.contains(selection.anchorNode)) return;
+    updateReviewFormattingState();
   });
 
   // Quick highlight button
@@ -2000,6 +2290,9 @@ function setupEventListeners() {
     }
     if (!btnExport.contains(e.target) && !exportMenu.contains(e.target)) {
       exportMenu.classList.remove('active');
+    }
+    if (!reviewExportBtn.contains(e.target) && !reviewExportMenu.contains(e.target)) {
+      reviewExportMenu.classList.remove('active');
     }
     // Close selection popup when clicking outside of it
     // Skip if popup was just shown this frame (selection mouseup + click fire together)
@@ -2279,8 +2572,25 @@ function updateZoomSelect() {
 // Keyboard shortcuts
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
+    const isEditingReview = e.target === reviewEditor || reviewEditor.contains(e.target);
+
+    if (isEditingReview) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoReviewChange();
+        return;
+      }
+
+      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+          ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+        e.preventDefault();
+        redoReviewChange();
+        return;
+      }
+    }
+
     // Don't trigger shortcuts when typing in input fields
-    if (e.target.matches('input, textarea, select')) {
+    if (e.target.matches('input, textarea, select') || e.target.isContentEditable) {
       if (e.key === 'Escape') {
         e.target.blur();
       }

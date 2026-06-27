@@ -1,15 +1,30 @@
+-- Projects table
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    conference TEXT,
+    submission_link TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- PDFs table
 CREATE TABLE IF NOT EXISTS pdfs (
     id TEXT PRIMARY KEY,
+    project_id TEXT,
     name TEXT NOT NULL,
     path TEXT NOT NULL UNIQUE,
     page_count INTEGER DEFAULT 0,
+    review_deadline TEXT,
+    review_content TEXT,
+    review_updated_at TEXT,
     last_opened_at TEXT,
     completed INTEGER DEFAULT 0,
     review_decision TEXT,
     completed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 -- Categories table

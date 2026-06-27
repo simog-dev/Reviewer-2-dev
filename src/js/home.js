@@ -1,4 +1,4 @@
-import '../components/pdf-card.js';
+import '../components/project-card.js';
 import { debounce } from './utils.js';
 import * as pdfjsLib from '../../node_modules/pdfjs-dist/legacy/build/pdf.min.mjs';
 import ThemeManager from './theme-manager.js';
@@ -13,13 +13,19 @@ const ITEMS_PER_PAGE = 15;
 
 // State
 let allPDFs = [];
-let filteredPDFs = [];
+let allProjects = [];
+let filteredProjects = [];
 let currentPage = 1;
 let searchQuery = '';
 let completionFilter = 'all'; // 'all', 'completed', 'incomplete'
 let deleteTargetId = null;
 let notFoundPdfId = null;
 let pendingNewPath = null;
+let pendingProjectFilePath = null;
+let editingProjectId = null;
+let editingPaperId = null;
+let pendingPaperFilePath = null;
+let pendingPaperProjectId = null;
 
 // DOM Elements
 const loadingState = document.getElementById('loading-state');
@@ -37,6 +43,28 @@ const btnSettings = document.getElementById('btn-settings');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const toastContainer = document.getElementById('toast-container');
 const completionFilters = document.getElementById('completion-filters');
+
+const projectModal = document.getElementById('project-modal');
+const projectModalTitle = document.getElementById('project-modal-title');
+const projectModalClose = document.getElementById('project-modal-close');
+const projectModalCancel = document.getElementById('project-modal-cancel');
+const projectModalConfirm = document.getElementById('project-modal-confirm');
+const projectNameInput = document.getElementById('project-name-input');
+const projectConferenceInput = document.getElementById('project-conference-input');
+const projectDeadlineInput = document.getElementById('project-deadline-input');
+const projectSubmissionLinkInput = document.getElementById('project-submission-link-input');
+const projectFirstPaper = document.getElementById('project-first-paper');
+const projectFirstPaperName = document.getElementById('project-first-paper-name');
+
+const paperModal = document.getElementById('paper-modal');
+const paperModalTitle = document.getElementById('paper-modal-title');
+const paperModalClose = document.getElementById('paper-modal-close');
+const paperModalCancel = document.getElementById('paper-modal-cancel');
+const paperModalConfirm = document.getElementById('paper-modal-confirm');
+const paperNameInput = document.getElementById('paper-name-input');
+const paperDeadlineInput = document.getElementById('paper-deadline-input');
+const paperSourceFile = document.getElementById('paper-source-file');
+const paperSourceFileName = document.getElementById('paper-source-file-name');
 
 // Delete Modal Elements
 const deleteModal = document.getElementById('delete-modal');
@@ -75,73 +103,68 @@ async function init() {
 async function loadPDFs() {
   showLoading();
   try {
-    allPDFs = await window.api.getAllPDFs();
+    allProjects = await window.api.getAllProjects();
+    allPDFs = allProjects.flatMap(project => project.papers || []);
     filterAndRender();
   } catch (error) {
-    console.error('Error loading PDFs:', error);
-    showToast('Failed to load PDFs', 'error');
+    console.error('Error loading projects:', error);
+    showToast('Failed to load projects', 'error');
   }
 }
 
 // Filter and render PDFs
 function filterAndRender() {
   // Apply search filter
-  let filtered = [...allPDFs];
+  let filtered = [...allProjects];
 
   if (searchQuery) {
-    filtered = filtered.filter(pdf =>
-      pdf.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter(project =>
+      project.name.toLowerCase().includes(query) ||
+      (project.conference || '').toLowerCase().includes(query) ||
+      (project.papers || []).some(paper => paper.name.toLowerCase().includes(query))
     );
   }
 
   // Apply completion filter
   if (completionFilter === 'completed') {
-    filtered = filtered.filter(pdf => pdf.completed === 1);
+    filtered = filtered.filter(project => project.completed === 1);
   } else if (completionFilter === 'incomplete') {
-    filtered = filtered.filter(pdf => pdf.completed === 0 || !pdf.completed);
+    filtered = filtered.filter(project => project.completed === 0 || !project.completed);
   }
 
-  filteredPDFs = filtered;
+  filteredProjects = filtered;
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredPDFs.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
   currentPage = Math.min(currentPage, Math.max(1, totalPages));
 
   // Get current page items
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageItems = filteredPDFs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const pageItems = filteredProjects.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // Update UI
   hideLoading();
 
-  if (filteredPDFs.length === 0) {
+  if (filteredProjects.length === 0) {
     if (searchQuery) {
-      showEmpty('No PDFs match your search');
+      showEmpty('No projects match your search');
     } else {
       showEmpty();
     }
   } else {
-    renderPDFs(pageItems);
+    renderProjects(pageItems);
     updatePagination(totalPages);
   }
 }
 
-// Render PDF cards
-function renderPDFs(pdfs) {
+// Render project cards
+function renderProjects(projects) {
   emptyState.classList.add('hidden');
   pdfGrid.classList.remove('hidden');
 
-  pdfGrid.innerHTML = pdfs.map(pdf => `
-    <pdf-card
-      pdf-id="${pdf.id}"
-      name="${escapeAttr(pdf.name)}"
-      path="${escapeAttr(pdf.path)}"
-      page-count="${pdf.page_count || 0}"
-      annotation-count="${pdf.annotation_count || 0}"
-      updated-at="${pdf.updated_at}"
-      completed="${pdf.completed || 0}"
-      ${pdf.review_decision ? `review-decision="${escapeAttr(pdf.review_decision)}"` : ''}
-    ></pdf-card>
+  pdfGrid.innerHTML = projects.map(project => `
+    <project-card project="${escapeAttr(JSON.stringify(project))}"></project-card>
   `).join('');
 }
 
@@ -173,10 +196,10 @@ function showEmpty(message) {
 
   if (message) {
     titleEl.textContent = message;
-    textEl.textContent = 'Try adjusting your search or add a new PDF.';
+    textEl.textContent = 'Try adjusting your search or add a new project.';
   } else {
-    titleEl.textContent = 'No PDFs yet';
-    textEl.textContent = 'Drag and drop a PDF file here, or click the "Add PDF" button to get started.';
+    titleEl.textContent = 'No projects yet';
+    textEl.textContent = 'Drag and drop a PDF file here, or click the "Add Project" button to get started.';
   }
 }
 
@@ -186,15 +209,209 @@ async function handleAddPDF() {
     const filePath = await window.api.openPDFDialog();
     if (!filePath) return;
 
-    await addPDFFromPath(filePath);
+    showProjectModal(filePath);
   } catch (error) {
-    console.error('Error adding PDF:', error);
-    showToast('Failed to add PDF', 'error');
+    console.error('Error adding project:', error);
+    showToast('Failed to add project', 'error');
+  }
+}
+
+function showProjectModal(filePath) {
+  editingProjectId = null;
+  pendingProjectFilePath = filePath;
+  projectModalTitle.textContent = 'New Project';
+  projectModalConfirm.textContent = 'Create Project';
+  projectDeadlineInput.closest('.form-group').classList.remove('hidden');
+  projectFirstPaper.classList.remove('hidden');
+  projectFirstPaperName.textContent = filePath.split(/[/\\]/).pop();
+  projectNameInput.placeholder = 'Defaults to the PDF name';
+  projectNameInput.value = '';
+  projectConferenceInput.value = '';
+  projectDeadlineInput.value = '';
+  projectSubmissionLinkInput.value = '';
+  projectModal.classList.add('active');
+  projectNameInput.focus();
+}
+
+function showProjectEditModal(project) {
+  editingProjectId = project.id;
+  pendingProjectFilePath = null;
+  projectModalTitle.textContent = 'Edit Project';
+  projectModalConfirm.textContent = 'Save Changes';
+  projectDeadlineInput.closest('.form-group').classList.add('hidden');
+  projectFirstPaper.classList.add('hidden');
+  projectNameInput.placeholder = 'Project name';
+  projectNameInput.value = project.name || '';
+  projectConferenceInput.value = project.conference || '';
+  projectDeadlineInput.value = '';
+  projectSubmissionLinkInput.value = project.submission_link || '';
+  projectModal.classList.add('active');
+  projectNameInput.focus();
+  projectNameInput.select();
+}
+
+function closeProjectModal() {
+  projectModal.classList.remove('active');
+  pendingProjectFilePath = null;
+  editingProjectId = null;
+}
+
+async function confirmProjectModal() {
+  if (editingProjectId) {
+    await confirmProjectEdit();
+  } else {
+    await confirmProjectCreate();
+  }
+}
+
+async function confirmProjectEdit() {
+  const projectName = projectNameInput.value.trim();
+  if (!projectName) {
+    showToast('Project name is required', 'warning');
+    projectNameInput.focus();
+    return;
+  }
+
+  const projectId = editingProjectId;
+  const data = {
+    name: projectName,
+    conference: projectConferenceInput.value.trim() || null,
+    submissionLink: projectSubmissionLinkInput.value.trim() || null
+  };
+
+  closeProjectModal();
+
+  try {
+    await window.api.updateProject(projectId, data);
+    await loadPDFs();
+    showToast('Project updated successfully', 'success');
+  } catch (error) {
+    console.error('Error updating project:', error);
+    showToast('Failed to update project: ' + error.message, 'error');
+  }
+}
+
+async function confirmProjectCreate() {
+  if (!pendingProjectFilePath) return;
+
+  const filePath = pendingProjectFilePath;
+  const options = {
+    projectName: projectNameInput.value.trim() || null,
+    conference: projectConferenceInput.value.trim() || null,
+    reviewDeadline: projectDeadlineInput.value || null,
+    submissionLink: projectSubmissionLinkInput.value.trim() || null
+  };
+
+  closeProjectModal();
+
+  try {
+    await addPDFFromPath(filePath, options);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    showToast('Failed to create project: ' + error.message, 'error');
+  }
+}
+
+function showPaperEditModal(paper) {
+  editingPaperId = paper.id;
+  pendingPaperFilePath = null;
+  pendingPaperProjectId = null;
+  paperModalTitle.textContent = 'Edit Paper';
+  paperModalConfirm.textContent = 'Save Changes';
+  paperSourceFile.classList.add('hidden');
+  paperNameInput.value = paper.name || '';
+  paperDeadlineInput.value = paper.review_deadline || '';
+  paperModal.classList.add('active');
+  paperNameInput.focus();
+  paperNameInput.select();
+}
+
+function showPaperAddModal(filePath, projectId) {
+  editingPaperId = null;
+  pendingPaperFilePath = filePath;
+  pendingPaperProjectId = projectId;
+  paperModalTitle.textContent = 'Add Paper';
+  paperModalConfirm.textContent = 'Add Paper';
+  paperSourceFile.classList.remove('hidden');
+  paperSourceFileName.textContent = filePath.split(/[/\\]/).pop();
+  paperNameInput.value = filePath.split(/[/\\]/).pop();
+  paperDeadlineInput.value = '';
+  paperModal.classList.add('active');
+  paperNameInput.focus();
+  paperNameInput.select();
+}
+
+function closePaperModal() {
+  paperModal.classList.remove('active');
+  editingPaperId = null;
+  pendingPaperFilePath = null;
+  pendingPaperProjectId = null;
+}
+
+async function confirmPaperModal() {
+  if (editingPaperId) {
+    await confirmPaperEdit();
+  } else {
+    await confirmPaperAdd();
+  }
+}
+
+async function confirmPaperEdit() {
+  const paperName = paperNameInput.value.trim();
+  if (!paperName) {
+    showToast('Paper name is required', 'warning');
+    paperNameInput.focus();
+    return;
+  }
+
+  const paperId = editingPaperId;
+  const data = {
+    name: paperName,
+    reviewDeadline: paperDeadlineInput.value || null
+  };
+
+  closePaperModal();
+
+  try {
+    await window.api.updatePDF(paperId, data);
+    await loadPDFs();
+    showToast('Paper updated successfully', 'success');
+  } catch (error) {
+    console.error('Error updating paper:', error);
+    showToast('Failed to update paper: ' + error.message, 'error');
+  }
+}
+
+async function confirmPaperAdd() {
+  if (!pendingPaperFilePath || !pendingPaperProjectId) return;
+
+  const paperName = paperNameInput.value.trim();
+  if (!paperName) {
+    showToast('Paper name is required', 'warning');
+    paperNameInput.focus();
+    return;
+  }
+
+  const filePath = pendingPaperFilePath;
+  const projectId = pendingPaperProjectId;
+  const options = {
+    projectId,
+    paperName,
+    reviewDeadline: paperDeadlineInput.value || null
+  };
+
+  closePaperModal();
+
+  try {
+    await addPDFFromPath(filePath, options);
+  } catch (error) {
+    console.error('Error adding paper:', error);
+    showToast('Failed to add paper: ' + error.message, 'error');
   }
 }
 
 // Add PDF from file path
-async function addPDFFromPath(filePath) {
+async function addPDFFromPath(filePath, options = {}) {
   try {
     // Get metadata
     const metadata = await window.api.getPDFMetadata(filePath);
@@ -205,22 +422,23 @@ async function addPDFFromPath(filePath) {
 
     // Save to database
     const pdf = await window.api.addPDF({
-      name: metadata.name,
+      name: options.paperName || metadata.name,
       path: filePath,
-      pageCount: pageCount
+      pageCount: pageCount,
+      projectId: options.projectId || null,
+      projectName: options.projectName || metadata.name,
+      conference: options.conference || null,
+      reviewDeadline: options.reviewDeadline || null,
+      submissionLink: options.submissionLink || null
     });
 
-    // Update local state and re-render
-    const existingIndex = allPDFs.findIndex(p => p.id === pdf.id);
-    if (existingIndex >= 0) {
-      allPDFs[existingIndex] = pdf;
+    if (findPaper(pdf.id)) {
       showToast('PDF already exists, opening...', 'success');
     } else {
-      allPDFs.unshift(pdf);
-      showToast('PDF added successfully', 'success');
+      showToast(options.projectId ? 'Paper added successfully' : 'Project created successfully', 'success');
     }
 
-    filterAndRender();
+    await loadPDFs();
 
     // Navigate to review page
     await window.api.navigateToReview(pdf.id);
@@ -263,11 +481,8 @@ async function confirmDelete() {
     const deleteAnnotations = deleteAnnotationsCheckbox.checked;
     await window.api.deletePDF(deleteTargetId, deleteAnnotations);
 
-    // Update local state
-    allPDFs = allPDFs.filter(pdf => pdf.id !== deleteTargetId);
-
     closeDeleteModal();
-    filterAndRender();
+    await loadPDFs();
     showToast('PDF removed successfully', 'success');
   } catch (error) {
     console.error('Error deleting PDF:', error);
@@ -304,7 +519,7 @@ async function handlePDFNotFoundReload() {
     }
 
     // Get original PDF data
-    const pdf = allPDFs.find(p => p.id === notFoundPdfId);
+    const pdf = findPaper(notFoundPdfId);
     if (!pdf) {
       showToast('PDF not found', 'error');
       return;
@@ -363,12 +578,7 @@ async function updatePDFPath(pdfId, newPath) {
     // Update the PDF path and name in the database
     await window.api.updatePDF(pdfId, { path: newPath, name: newName });
 
-    // Update local state
-    const pdfIndex = allPDFs.findIndex(p => p.id === pdfId);
-    if (pdfIndex >= 0) {
-      allPDFs[pdfIndex].path = newPath;
-      allPDFs[pdfIndex].name = newName;
-    }
+    await loadPDFs();
 
     closePDFNotFoundModal();
     showToast('PDF path updated successfully', 'success');
@@ -412,7 +622,7 @@ async function handleDrop(e) {
   // If file.path is available (non-sandboxed), use it directly
   if (file.path) {
     try {
-      await addPDFFromPath(file.path);
+      showProjectModal(file.path);
       return;
     } catch (error) {
       console.error('Error adding PDF from path:', error);
@@ -428,7 +638,7 @@ async function handleDrop(e) {
 
     // Save file to app storage via main process, get back the path
     const savedPath = await window.api.addPDFFromData(file.name, data);
-    await addPDFFromPath(savedPath);
+    showProjectModal(savedPath);
   } catch (error) {
     console.error('Error adding dropped PDF:', error);
     showToast('Failed to add PDF: ' + error.message, 'error');
@@ -558,7 +768,7 @@ function setupEventListeners() {
   });
 
   btnNext.addEventListener('click', () => {
-    const totalPages = Math.ceil(filteredPDFs.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
     if (currentPage < totalPages) {
       currentPage++;
       filterAndRender();
@@ -578,6 +788,22 @@ function setupEventListeners() {
     if (e.target === deleteModal) closeDeleteModal();
   });
 
+  // Project modal
+  projectModalClose.addEventListener('click', closeProjectModal);
+  projectModalCancel.addEventListener('click', closeProjectModal);
+  projectModalConfirm.addEventListener('click', confirmProjectModal);
+  projectModal.addEventListener('click', (e) => {
+    if (e.target === projectModal) closeProjectModal();
+  });
+
+  // Paper modal
+  paperModalClose.addEventListener('click', closePaperModal);
+  paperModalCancel.addEventListener('click', closePaperModal);
+  paperModalConfirm.addEventListener('click', confirmPaperModal);
+  paperModal.addEventListener('click', (e) => {
+    if (e.target === paperModal) closePaperModal();
+  });
+
   // PDF Not Found modal
   pdfNotFoundClose.addEventListener('click', closePDFNotFoundModal);
   pdfNotFoundCancel.addEventListener('click', closePDFNotFoundModal);
@@ -594,12 +820,12 @@ function setupEventListeners() {
     if (e.target === pdfNameChangedModal) closePDFNameChangedModal();
   });
 
-  // PDF card events (delegated)
-  document.addEventListener('pdf-open', async (e) => {
+  // Project card events (delegated)
+  document.addEventListener('project-paper-open', async (e) => {
     const { id } = e.detail;
 
     // Get PDF data to check if file exists
-    const pdf = allPDFs.find(p => p.id === id);
+    const pdf = findPaper(id);
     if (!pdf) {
       showToast('PDF not found', 'error');
       return;
@@ -614,6 +840,27 @@ function setupEventListeners() {
 
     // File exists, navigate to review
     await window.api.navigateToReview(id);
+  });
+
+  document.addEventListener('project-paper-add', async (e) => {
+    const filePath = await window.api.openPDFDialog();
+    if (!filePath) return;
+
+    showPaperAddModal(filePath, e.detail.projectId);
+  });
+
+  document.addEventListener('project-edit', (e) => {
+    showProjectEditModal(e.detail.project);
+  });
+
+  document.addEventListener('paper-edit', (e) => {
+    showPaperEditModal(e.detail.paper);
+  });
+
+  document.addEventListener('project-platform-open', (e) => {
+    if (e.detail.url) {
+      window.open(e.detail.url, '_blank');
+    }
   });
 
   document.addEventListener('pdf-delete', (e) => {
@@ -642,8 +889,10 @@ function setupEventListeners() {
 // Keyboard shortcuts
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
+    const isTyping = isTypingTarget(e.target);
+
     // Ctrl+O: Open PDF
-    if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+    if (!isTyping && (e.ctrlKey || e.metaKey) && e.key === 'o') {
       e.preventDefault();
       handleAddPDF();
     }
@@ -656,19 +905,33 @@ function setupKeyboardShortcuts() {
         closePDFNotFoundModal();
       } else if (deleteModal.classList.contains('active')) {
         closeDeleteModal();
+      } else if (projectModal.classList.contains('active')) {
+        closeProjectModal();
+      } else if (paperModal.classList.contains('active')) {
+        closePaperModal();
       }
     }
 
     // Focus search: Ctrl+F or /
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    if (!isTyping && (e.ctrlKey || e.metaKey) && e.key === 'f') {
       e.preventDefault();
       searchInput.focus();
     }
-    if (e.key === '/' && document.activeElement !== searchInput) {
+    if (!isTyping && e.key === '/' && document.activeElement !== searchInput) {
       e.preventDefault();
       searchInput.focus();
     }
   });
+}
+
+function isTypingTarget(target) {
+  return target?.matches?.('input, textarea, select, [contenteditable="true"]');
+}
+
+function findPaper(id) {
+  return allProjects
+    .flatMap(project => project.papers || [])
+    .find(paper => paper.id === id);
 }
 
 // Initialize on DOM ready

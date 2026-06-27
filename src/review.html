@@ -100,44 +100,6 @@
           <span id="completion-btn-text">Mark as Completed</span>
         </button>
 
-        <!-- Export Button -->
-        <button class="btn btn-secondary btn-import" id="btn-import" title="Import Annotations">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Import
-        </button>
-
-        <div style="position: relative;">
-          <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export
-          </button>
-          <div class="export-menu" id="export-menu">
-            <div class="export-menu-item" data-format="json">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Export as JSON
-            </div>
-            <div class="export-menu-item" data-format="csv">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="8" y1="13" x2="16" y2="13"/>
-                <line x1="8" y1="17" x2="16" y2="17"/>
-              </svg>
-              Export as CSV
-            </div>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -238,35 +200,43 @@
             </div>
           </div>
 
-          <!-- Generate Review Button -->
-          <div class="generate-review-container">
-            <button class="btn btn-primary btn-generate-review" id="btn-generate-review" disabled>
-              <span class="generate-review-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
-                </svg>
-              </span>
-              <span class="generate-review-label">Generate Review</span>
-              <span class="generate-review-spinner" style="display:none"><div class="spinner"></div></span>
+          <div class="annotation-panel-footer">
+            <button class="btn btn-secondary btn-import" id="btn-import" title="Import Annotations">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Import
             </button>
 
-            <!-- LLM Configuration Tooltip -->
-            <div class="llm-config-tooltip" id="llm-config-tooltip">
-              <div class="llm-config-tooltip-content">
-                <svg class="llm-config-tooltip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <circle cx="12" cy="9" r="0.6" fill="currentColor"/>
+            <div class="annotation-export-container">
+              <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                <p class="llm-config-tooltip-text">
-                  API key required to generate reviews.
-                  <br>
-                  Configure it in <span class="llm-config-settings-link" id="llm-config-settings-link">settings</span>.
-                </p>
+                Export
+              </button>
+              <div class="export-menu" id="export-menu">
+                <div class="export-menu-item" data-format="json">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  Export as JSON
+                </div>
+                <div class="export-menu-item" data-format="csv">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="8" y1="13" x2="16" y2="13"/>
+                    <line x1="8" y1="17" x2="16" y2="17"/>
+                  </svg>
+                  Export as CSV
+                </div>
               </div>
-              <div class="llm-config-tooltip-arrow"></div>
             </div>
           </div>
         </div>
@@ -304,6 +274,157 @@
             <input type="text" class="webview-url-bar" id="webview-url-bar" placeholder="Enter URL..." value="https://www.google.com">
           </div>
           <webview src="https://www.google.com" nodeintegration="false" id="search-webview"></webview>
+        </div>
+      </div>
+
+      <!-- Panel Resizer 3 -->
+      <div class="panel-resizer" id="panel-resizer-3"></div>
+
+      <!-- Review Panel -->
+      <div class="review-panel" id="review-panel">
+        <span class="collapsed-indicator">Review</span>
+        <button class="collapse-btn" id="collapse-review" title="Collapse Review Panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="review-panel-content">
+          <div class="review-panel-header">
+            <div class="review-panel-heading">
+              <h2 class="review-panel-title">Review</h2>
+            </div>
+            <div class="review-panel-status">
+              <button class="btn btn-ghost btn-icon review-history-btn" id="review-undo-btn" title="Undo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 14 4 9 9 4"/>
+                  <path d="M20 20a8 8 0 0 0-8-8H4"/>
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-icon review-history-btn" id="review-redo-btn" title="Redo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="15 4 20 9 15 14"/>
+                  <path d="M4 20a8 8 0 0 1 8-8h8"/>
+                </svg>
+              </button>
+              <span class="review-save-status" id="review-save-status">Not saved yet</span>
+            </div>
+          </div>
+
+          <div class="review-editor-toolbar" id="review-editor-toolbar">
+            <button class="review-tool-btn" type="button" data-command="bold" title="Bold">
+              <strong>B</strong>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="italic" title="Italic">
+              <em>I</em>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="underline" title="Underline">
+              <span style="text-decoration: underline;">U</span>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="insertUnorderedList" title="Bullet List">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="9" y1="6" x2="20" y2="6"/>
+                <line x1="9" y1="12" x2="20" y2="12"/>
+                <line x1="9" y1="18" x2="20" y2="18"/>
+                <circle cx="4" cy="6" r="1"/>
+                <circle cx="4" cy="12" r="1"/>
+                <circle cx="4" cy="18" r="1"/>
+              </svg>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="insertOrderedList" title="Numbered List">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="10" y1="6" x2="20" y2="6"/>
+                <line x1="10" y1="12" x2="20" y2="12"/>
+                <line x1="10" y1="18" x2="20" y2="18"/>
+                <path d="M4 6h1v4"/>
+                <path d="M4 10h2"/>
+                <path d="M4 14c0-1 2-1 2 0s-2 1-2 2h2"/>
+              </svg>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="justifyLeft" title="Align Left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="4" y1="12" x2="14" y2="12"/>
+                <line x1="4" y1="18" x2="20" y2="18"/>
+              </svg>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="justifyCenter" title="Align Center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="6" y1="6" x2="18" y2="6"/>
+                <line x1="4" y1="12" x2="20" y2="12"/>
+                <line x1="6" y1="18" x2="18" y2="18"/>
+              </svg>
+            </button>
+            <button class="review-tool-btn" type="button" data-command="justifyRight" title="Align Right">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="10" y1="12" x2="20" y2="12"/>
+                <line x1="4" y1="18" x2="20" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="review-editor-shell">
+            <div class="review-editor" id="review-editor" contenteditable="true" spellcheck="true" data-placeholder="Write the review here..."></div>
+          </div>
+
+          <div class="review-panel-footer">
+            <div class="review-export-container">
+              <button class="btn btn-secondary btn-review-export" id="btn-review-export" title="Export Review">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export
+              </button>
+              <div class="export-menu" id="review-export-menu">
+                <div class="export-menu-item" data-format="txt">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  Export as TXT
+                </div>
+                <div class="export-menu-item" data-format="pdf">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <path d="M8 13h3a2 2 0 0 0 0-4H8v8"/>
+                    <path d="M14 17h1a2 2 0 0 0 0-4h-1v4z"/>
+                  </svg>
+                  Export as PDF
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-generate-review" id="btn-generate-review" disabled>
+              <span class="generate-review-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </span>
+              <span class="generate-review-label">Generate Review</span>
+              <span class="generate-review-spinner" style="display:none"><div class="spinner"></div></span>
+            </button>
+
+            <div class="llm-config-tooltip" id="llm-config-tooltip">
+              <div class="llm-config-tooltip-content">
+                <svg class="llm-config-tooltip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <circle cx="12" cy="9" r="0.6" fill="currentColor"/>
+                </svg>
+                <p class="llm-config-tooltip-text">
+                  API key required to generate reviews.
+                  <br>
+                  Configure it in <span class="llm-config-settings-link" id="llm-config-settings-link">settings</span>.
+                </p>
+              </div>
+              <div class="llm-config-tooltip-arrow"></div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
