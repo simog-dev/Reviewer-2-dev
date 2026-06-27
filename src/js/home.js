@@ -163,9 +163,12 @@ function renderProjects(projects) {
   emptyState.classList.add('hidden');
   pdfGrid.classList.remove('hidden');
 
-  pdfGrid.innerHTML = projects.map(project => `
-    <project-card project="${escapeAttr(JSON.stringify(project))}"></project-card>
-  `).join('');
+  pdfGrid.innerHTML = '';
+  projects.forEach(project => {
+    const card = document.createElement('project-card');
+    card.project = project;
+    pdfGrid.appendChild(card);
+  });
 }
 
 // Update pagination controls
@@ -677,16 +680,6 @@ function showToast(message, type = 'success') {
       toast.remove();
     }
   }, 4000);
-}
-
-// Utility: Escape HTML attributes
-function escapeAttr(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 // Theme toggle setup

@@ -4,6 +4,7 @@ class ProjectCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this._project = null;
   }
 
   static get observedAttributes() {
@@ -23,6 +24,10 @@ class ProjectCard extends HTMLElement {
   }
 
   get project() {
+    if (this._project) {
+      return this._project;
+    }
+
     try {
       return JSON.parse(this.getAttribute('project') || '{}');
     } catch {
@@ -30,17 +35,29 @@ class ProjectCard extends HTMLElement {
     }
   }
 
+  set project(value) {
+    this._project = value || {};
+    this.render();
+    this.addEventListeners();
+  }
+
   render() {
     const project = this.project;
     const papers = Array.isArray(project.papers) ? project.papers : [];
     const completed = papers.length > 0 && papers.every(paper => paper.completed === 1);
     const totalAnnotations = papers.reduce((total, paper) => total + (paper.annotation_count || 0), 0);
-    const reviewDecision = papers.length === 1 ? papers[0].review_decision : null;
 
     const styles = `
       <style>
         :host {
           display: block;
+          box-sizing: border-box;
+        }
+
+        *,
+        *::before,
+        *::after {
+          box-sizing: inherit;
         }
 
         .project-card {
@@ -52,6 +69,7 @@ class ProjectCard extends HTMLElement {
           border-radius: var(--radius-md, 8px);
           padding: 16px;
           min-height: 100%;
+          height: 100%;
           transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
         }
 
@@ -154,6 +172,7 @@ class ProjectCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: 8px;
+          min-height: 0;
         }
 
         .paper {
@@ -239,6 +258,7 @@ class ProjectCard extends HTMLElement {
           margin-top: 7px;
           display: flex;
           align-items: center;
+          flex-wrap: wrap;
           gap: 10px;
           color: var(--color-text-muted, #737373);
           font-size: 0.75rem;
@@ -286,13 +306,6 @@ class ProjectCard extends HTMLElement {
       </style>
     `;
 
-    const decisionLabels = {
-      'accept': 'Accept',
-      'minor-revisions': 'Minor',
-      'major-revisions': 'Major',
-      'reject': 'Reject'
-    };
-
     this.shadowRoot.innerHTML = `
       ${styles}
       <article class="project-card">
@@ -314,7 +327,6 @@ class ProjectCard extends HTMLElement {
         <div class="meta-row">
           <span class="pill">${papers.length} paper${papers.length !== 1 ? 's' : ''}</span>
           <span class="pill">${totalAnnotations} annotation${totalAnnotations !== 1 ? 's' : ''}</span>
-          ${reviewDecision ? `<span class="pill decision ${this.escape(reviewDecision)}">${this.escape(decisionLabels[reviewDecision] || reviewDecision)}</span>` : ''}
         </div>
 
         <div class="paper-list">
@@ -352,6 +364,13 @@ class ProjectCard extends HTMLElement {
   }
 
   renderPaper(paper) {
+    const decisionLabels = {
+      'accept': 'Accept',
+      'minor-revisions': 'Minor',
+      'major-revisions': 'Major',
+      'reject': 'Reject'
+    };
+
     return `
       <div class="paper" tabindex="0" role="button" data-paper-id="${this.escape(paper.id)}" aria-label="Open ${this.escape(paper.name)}">
         <div class="paper-top">
@@ -359,6 +378,7 @@ class ProjectCard extends HTMLElement {
             ${paper.completed === 1 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
           </span>
           <span class="paper-name" title="${this.escape(paper.name)}">${this.escape(paper.name)}</span>
+          ${paper.review_decision ? `<span class="pill decision ${this.escape(paper.review_decision)}">${this.escape(decisionLabels[paper.review_decision] || paper.review_decision)}</span>` : ''}
           <span class="paper-actions">
             <button class="paper-action paper-edit" data-paper="${this.escape(JSON.stringify(paper))}" title="Edit paper" aria-label="Edit ${this.escape(paper.name)}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
