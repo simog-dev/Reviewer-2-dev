@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -167,6 +167,17 @@ ipcMain.handle('dialog:openPDF', async () => {
   }
 
   return result.filePaths[0];
+});
+
+ipcMain.handle('external:open', async (event, url) => {
+  try {
+    if (!url) return false;
+    await shell.openExternal(url);
+    return true;
+  } catch (error) {
+    console.error('Error opening external URL:', error);
+    return false;
+  }
 });
 
 ipcMain.handle('pdf:fileExists', async (event, filePath) => {

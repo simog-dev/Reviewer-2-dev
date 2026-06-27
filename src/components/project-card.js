@@ -70,13 +70,6 @@ class ProjectCard extends HTMLElement {
           padding: 16px;
           min-height: 100%;
           height: 100%;
-          transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
-        }
-
-        .project-card:hover {
-          background-color: var(--color-bg-hover, #2a2a2a);
-          border-color: var(--color-border-light, #404040);
-          transform: translateY(-2px);
         }
 
         .project-header {
@@ -181,6 +174,7 @@ class ProjectCard extends HTMLElement {
           background-color: var(--color-bg, #111111);
           padding: 10px;
           cursor: pointer;
+          transition: border-color 150ms ease;
         }
 
         .paper:hover,
@@ -355,7 +349,7 @@ class ProjectCard extends HTMLElement {
                 <polyline points="15 3 21 3 21 9"/>
                 <line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
-              Platform
+              Send Review
             </button>
           ` : ''}
         </div>

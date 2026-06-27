@@ -1,5 +1,6 @@
 import '../components/project-card.js';
 import { debounce } from './utils.js';
+import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import * as pdfjsLib from '../../node_modules/pdfjs-dist/legacy/build/pdf.min.mjs';
 import ThemeManager from './theme-manager.js';
 
@@ -94,6 +95,13 @@ const pdfNameChangedConfirm = document.getElementById('pdf-name-changed-confirm'
 async function init() {
   await ThemeManager.init();
   setupThemeToggle();
+  setupDraggableModals([
+    projectModal,
+    paperModal,
+    deleteModal,
+    pdfNotFoundModal,
+    pdfNameChangedModal
+  ]);
   await loadPDFs();
   setupEventListeners();
   setupKeyboardShortcuts();
@@ -220,6 +228,7 @@ async function handleAddPDF() {
 }
 
 function showProjectModal(filePath) {
+  resetDraggableModal(projectModal);
   editingProjectId = null;
   pendingProjectFilePath = filePath;
   projectModalTitle.textContent = 'New Project';
@@ -237,6 +246,7 @@ function showProjectModal(filePath) {
 }
 
 function showProjectEditModal(project) {
+  resetDraggableModal(projectModal);
   editingProjectId = project.id;
   pendingProjectFilePath = null;
   projectModalTitle.textContent = 'Edit Project';
@@ -316,6 +326,7 @@ async function confirmProjectCreate() {
 }
 
 function showPaperEditModal(paper) {
+  resetDraggableModal(paperModal);
   editingPaperId = paper.id;
   pendingPaperFilePath = null;
   pendingPaperProjectId = null;
@@ -330,6 +341,7 @@ function showPaperEditModal(paper) {
 }
 
 function showPaperAddModal(filePath, projectId) {
+  resetDraggableModal(paperModal);
   editingPaperId = null;
   pendingPaperFilePath = filePath;
   pendingPaperProjectId = projectId;
@@ -471,6 +483,7 @@ async function getPDFPageCount(data) {
 
 // Delete PDF handler
 function handleDeletePDF(id, name) {
+  resetDraggableModal(deleteModal);
   deleteTargetId = id;
   deletePdfName.textContent = name;
   deleteAnnotationsCheckbox.checked = true;
@@ -500,6 +513,7 @@ function closeDeleteModal() {
 
 // PDF Not Found Modal Functions
 function showPDFNotFoundModal(id, name, path) {
+  resetDraggableModal(pdfNotFoundModal);
   notFoundPdfId = id;
   pdfNotFoundName.textContent = `PDF: "${name}"`;
   pdfNotFoundPath.textContent = path;
@@ -539,6 +553,7 @@ async function handlePDFNotFoundReload() {
       pdfNameOriginal.textContent = originalName;
       pdfNameNew.textContent = newName;
       pdfNotFoundModal.classList.remove('active');
+      resetDraggableModal(pdfNameChangedModal);
       pdfNameChangedModal.classList.add('active');
       return;
     }
@@ -556,6 +571,7 @@ function closePDFNameChangedModal() {
   pdfNameChangedModal.classList.remove('active');
   pendingNewPath = null;
   // Re-show the PDF not found modal
+  resetDraggableModal(pdfNotFoundModal);
   pdfNotFoundModal.classList.add('active');
 }
 
@@ -852,7 +868,7 @@ function setupEventListeners() {
 
   document.addEventListener('project-platform-open', (e) => {
     if (e.detail.url) {
-      window.open(e.detail.url, '_blank');
+      window.api.openExternal(e.detail.url);
     }
   });
 

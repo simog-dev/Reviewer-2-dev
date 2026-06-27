@@ -5,6 +5,7 @@ import { AnnotationManager } from './annotation-manager.js';
 import { ResizablePanels } from './resizable-panels.js';
 import { getCategoryIcon, escapeHtml, debounce, formatRelativeTime } from './utils.js';
 import { createLLMProvider } from './llm-provider.js';
+import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import ThemeManager from './theme-manager.js';
 
 // State
@@ -148,6 +149,13 @@ async function init() {
   // Initialize theme
   await ThemeManager.init();
   setupThemeToggle();
+  setupDraggableModals([
+    annotationModal,
+    completionModal,
+    pdfNotFoundModal,
+    importCompatibilityModal,
+    deleteAnnotationModal
+  ]);
 
   // Get PDF ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -794,6 +802,7 @@ function hideSelectionPopup() {
 }
 
 function showFreeNoteModal() {
+  resetDraggableModal(annotationModal);
   modalTitle.textContent = 'Add Note';
 
   // Hide selected text group for free notes
@@ -821,6 +830,7 @@ function showFreeNoteModal() {
 
 function showAnnotationModal(categoryId) {
   if (!pendingSelection) return;
+  resetDraggableModal(annotationModal);
 
   const category = categories.find(c => c.id === categoryId);
   if (!category) return;
@@ -1369,6 +1379,7 @@ function getHighestImportedPage(importData) {
 }
 
 function showImportCompatibilityModal(message) {
+  resetDraggableModal(importCompatibilityModal);
   importCompatibilityMessage.textContent = message;
   importCompatibilityModal.classList.add('active');
 }
@@ -1532,6 +1543,7 @@ function updateCompletionButton() {
 }
 
 function showCompletionModal() {
+  resetDraggableModal(completionModal);
   reviewDecisionSelect.value = pdfData.review_decision || 'accept';
   completionModal.classList.add('active');
   reviewDecisionSelect.focus();
@@ -1578,6 +1590,7 @@ async function confirmCompletion() {
 
 // PDF Not Found Modal Functions
 function showPDFNotFoundModal(filePath) {
+  resetDraggableModal(pdfNotFoundModal);
   pdfNotFoundPath.textContent = filePath;
   pdfNotFoundModal.classList.add('active');
   pdfLoading.classList.add('hidden');
@@ -1914,6 +1927,7 @@ function clearSearchHighlights() {
 
 // Delete Annotation Modal
 function showDeleteAnnotationModal(annotationId) {
+  resetDraggableModal(deleteAnnotationModal);
   pendingDeleteAnnotationId = annotationId;
   deleteAnnotationModal.classList.add('active');
 }

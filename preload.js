@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld('api', {
   saveFile: (options) => ipcRenderer.invoke('export:saveFile', options),
   exportReviewPDF: (options) => ipcRenderer.invoke('export:reviewPDF', options),
   openImportFile: () => ipcRenderer.invoke('import:openFile'),
+  openExternal: (url) => ipcRenderer.invoke('external:open', url),
 
   // Settings
   getSetting: (key) => ipcRenderer.invoke('settings:get', key),
