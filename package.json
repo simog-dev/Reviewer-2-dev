@@ -4,14 +4,21 @@
   "description": "Professional peer review application for scholarly documents",
   "main": "main.js",
   "scripts": {
+    "vendor:assets": "node scripts/vendor-assets.js",
+    "prestart": "node scripts/vendor-assets.js",
     "start": "electron .",
+    "prestart:dev": "node scripts/vendor-assets.js",
     "start:dev": "electron . --dev",
+    "prebuild": "node scripts/vendor-assets.js",
     "build": "electron-builder",
+    "prebuild:mac": "node scripts/vendor-assets.js",
     "build:mac": "electron-builder --mac",
+    "prebuild:win": "node scripts/vendor-assets.js",
     "build:win": "electron-builder --win",
+    "prebuild:linux": "node scripts/vendor-assets.js",
     "build:linux": "electron-builder --linux",
-    "rebuild": "npx @electron/rebuild -f -w better-sqlite3",
-    "postinstall": "npx @electron/rebuild -f -w better-sqlite3 || true",
+    "rebuild": "electron-builder install-app-deps",
+    "postinstall": "node scripts/vendor-assets.js && electron-builder install-app-deps || true",
     "test": "node tests/run-all-tests.js",
     "test:install": "node tests/install.test.js",
     "test:unit": "node tests/unit/run-unit-tests.js",
@@ -23,17 +30,16 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "better-sqlite3": "^11.7.0",
-    "electron-updater": "^6.7.3",
-    "pdfjs-dist": "^6.0.227",
-    "uuid": "^11.0.5"
+    "better-sqlite3": "^12.11.1",
+    "electron-updater": "^6.8.9",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.7.1",
+    "@google/generative-ai": "^0.24.1",
     "@playwright/test": "^1.49.1",
-    "electron": "^33.3.1",
-    "electron-builder": "^25.1.8",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
+    "pdfjs-dist": "^6.1.200",
     "playwright": "^1.49.1"
   },
   "build": {
@@ -47,7 +53,13 @@
       "main.js",
       "preload.js",
       "src/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!**/.DS_Store",
+      "!src/logo/icon.iconset/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
     ],
     "publish": {
       "provider": "github",
@@ -75,10 +87,12 @@
           "x64"
         ]
       },
-      "certificateSubjectName": "Reviewer2",
-      "signingHashAlgorithms": [
-        "sha256"
-      ]
+      "signtoolOptions": {
+        "certificateSubjectName": "Reviewer2",
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      }
     },
     "nsis": {
       "oneClick": false,

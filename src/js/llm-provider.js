@@ -3,7 +3,7 @@
  * Add new providers by extending LLMProvider and registering in createLLMProvider().
  */
 
-import { GoogleGenerativeAI } from '../../node_modules/@google/generative-ai/dist/index.mjs';
+import { GoogleGenerativeAI } from '../vendor/@google/generative-ai/index.mjs';
 
 const DEFAULT_PROMPT = `You are a thorough academic paper reviewer. Based on the annotations below from a paper I'm reviewing, generate a comprehensive written review. Group findings by severity (Critical first, then Major, Minor, Suggestion, Question). For each finding, reference the page number and quoted text. Be specific, constructive, and actionable. End with a brief summary of overall quality. Output plain text, no markdown.`;
 

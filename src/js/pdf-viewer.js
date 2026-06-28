@@ -1,12 +1,11 @@
 // PDF.js Viewer for Electron
 // Compatible with pdfjs-dist v6.x
 
-import * as pdfjsLib from '../../node_modules/pdfjs-dist/legacy/build/pdf.min.mjs';
+import * as pdfjsLib from '../vendor/pdfjs-dist/legacy/build/pdf.min.mjs';
 import { extractReferencesFromPages, findCitationsInText, parseCitationNumbers } from './reference-parser.js';
 
 // Initialize PDF.js worker
-const basePath = new URL('..', window.location.href).href;
-const pdfjsWorkerSrc = `${basePath}node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs`;
+const pdfjsWorkerSrc = new URL('../vendor/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).href;
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
 
 async function initPdfJs() {
@@ -104,9 +103,9 @@ export class PDFViewer {
 
       const loadingTask = pdfjs.getDocument({
         data: pdfData,
-        cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
+        cMapUrl: new URL('../vendor/pdfjs-dist/cmaps/', import.meta.url).href,
         cMapPacked: true,
-        standardFontDataUrl: '../node_modules/pdfjs-dist/standard_fonts/',
+        standardFontDataUrl: new URL('../vendor/pdfjs-dist/standard_fonts/', import.meta.url).href,
       });
 
       this.pdf = await loadingTask.promise;
