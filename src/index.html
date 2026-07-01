@@ -7,48 +7,140 @@
   <title>Reviewer 2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/home.css">
 </head>
-<body>
-  <div class="home-container">
-    <!-- Header -->
-    <header class="home-header">
-      <div class="header-branding">
-        <div class="title-with-logo">
-          <img src="logo/logo.png" alt="Reviewer 2 Logo" class="app-logo">
-          <h1 class="home-title">Reviewer 2</h1>
+<body class="home-page">
+  <div class="home-shell">
+    <aside class="home-sidebar">
+      <div class="sidebar-brand">
+        <img src="logo/logo.png" alt="Reviewer logo" class="sidebar-logo">
+        <div class="sidebar-brand-copy">
+          <span class="sidebar-brand-name">Reviewer</span>
         </div>
-        <p class="home-subtitle"><i>The person who clearly read a different paper, demands you cite their own 2014 study, and thinks your entire methodology is "fundamentally flawed" because you used a comma where they prefer a semicolon.</i></p>
       </div>
-      <div class="header-actions">
-        <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Theme">
+
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <button class="sidebar-nav-item is-active" data-filter="all" type="button">
+          <span class="sidebar-nav-icon sidebar-nav-icon--dashboard" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 10.5L12 3l9 7.5"/>
+              <path d="M5 10v10h14V10"/>
+              <path d="M9 20v-6h6v6"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">Dashboard</span>
+            <span class="sidebar-nav-subtitle">All projects</span>
+          </span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Projects</div>
+        <button class="sidebar-nav-item" data-filter="in-progress" type="button">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 3H14L19 8V21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">In progress</span>
+          </span>
+          <span class="sidebar-nav-count" id="count-in-progress">0</span>
+        </button>
+        <button class="sidebar-nav-item" data-filter="completed" type="button">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 3H14L19 8V21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 14L11.2 16.2L15.5 11.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">Completed</span>
+          </span>
+          <span class="sidebar-nav-count" id="count-completed">0</span>
+        </button>
+        <button class="sidebar-nav-item sidebar-nav-item--action" id="btn-sidebar-new-project" type="button">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">New project</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Papers</div>
+        <div class="sidebar-nav-item sidebar-nav-item--static" role="note" aria-disabled="true">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 3H14L19 8V21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 13H15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M9 17H13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">All papers</span>
+          </span>
+          <span class="sidebar-nav-count" id="count-papers">0</span>
+        </div>
+        <div class="sidebar-nav-item sidebar-nav-item--static" role="note" aria-disabled="true">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4h8v2"/>
+              <path d="M6 6l1 14h10l1-14"/>
+              <path d="M10 11v5"/>
+              <path d="M14 11v5"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">Trash</span>
+          </span>
+          <span class="sidebar-nav-count sidebar-nav-count--muted">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="btn-settings" class="sidebar-settings" type="button">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-copy">
+            <span class="sidebar-nav-label">Settings</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="home-main">
+      <section class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+          <p class="dashboard-kicker">Workspace</p>
+          <h1 class="dashboard-title">Your projects</h1>
+          <p class="dashboard-subtitle">Organize your papers and research notes.</p>
+        </div>
+
+        <button id="btn-theme-toggle" class="theme-toggle" type="button" title="Theme">
           <!-- Icon will be updated dynamically by JS -->
         </button>
-        <button id="btn-settings" class="btn btn-ghost btn-icon" title="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-        </button>
-        <button id="btn-add-pdf" class="btn btn-primary btn-add-pdf">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Add Project
-        </button>
-      </div>
-    </header>
+      </section>
 
-    <!-- Completion Filters + Pagination -->
-    <div class="completion-filters" id="completion-filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="completed">Completed</button>
-      <button class="filter-btn" data-filter="incomplete">Not Completed</button>
-      <div class="search-container">
-          <span class="search-icon">
+      <section class="dashboard-toolbar" aria-label="Project controls">
+        <div class="search-shell">
+          <span class="search-shell-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <path d="M21 21l-4.35-4.35"/>
@@ -57,66 +149,84 @@
           <input
             type="text"
             id="search-input"
-            class="input search-input"
+            class="search-input"
             placeholder="Search projects..."
             aria-label="Search projects"
           >
+          <button class="search-shell-action" type="button" aria-hidden="true" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+          </button>
         </div>
-      <div class="pagination" id="pagination">
-        <button class="btn btn-ghost btn-icon pagination-btn" id="btn-prev" disabled title="Previous page">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-        <span class="pagination-info" id="pagination-info">1 / 1</span>
-        <button class="btn btn-ghost btn-icon pagination-btn" id="btn-next" disabled title="Next page">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-      </div>
-    </div>
 
-    <!-- Main Content / Drop Zone -->
-    <main class="drop-zone" id="drop-zone">
-      <!-- Loading State -->
-      <div class="home-loading" id="loading-state">
-        <div class="spinner spinner-lg"></div>
-        <span class="loading-text">Loading projects...</span>
-      </div>
+        <div class="toolbar-actions">
+          <button id="btn-project-filters" class="toolbar-button toolbar-button--secondary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 5h18l-7 8v5l-4 2v-7z"/>
+            </svg>
+            Filters
+          </button>
+          <button id="btn-add-pdf" class="toolbar-button toolbar-button--primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New project
+          </button>
+        </div>
+      </section>
 
-      <!-- Empty State -->
-      <div class="empty-state hidden" id="empty-state">
-        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="12" y1="18" x2="12" y2="12"/>
-          <line x1="9" y1="15" x2="15" y2="15"/>
-        </svg>
-        <h2 class="empty-state-title">No projects yet</h2>
-        <p class="empty-state-text">
-          Drag and drop a PDF file here, or click the "Add Project" button to get started.
-        </p>
-        <button class="btn btn-primary btn-add-pdf" id="btn-add-pdf-empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Add Project
-        </button>
+      <div class="filters-popover hidden" id="completion-filters" aria-label="Project filters">
+        <button class="filter-btn active" data-filter="all" type="button">All projects</button>
+        <button class="filter-btn" data-filter="in-progress" type="button">In progress</button>
+        <button class="filter-btn" data-filter="completed" type="button">Completed</button>
       </div>
 
-      <!-- PDF Grid -->
-      <div class="pdf-grid hidden" id="pdf-grid"></div>
+      <section class="board-shell drop-zone" id="drop-zone">
+        <div class="home-loading" id="loading-state">
+          <div class="spinner spinner-lg"></div>
+          <span class="loading-text">Loading projects...</span>
+        </div>
+
+        <div class="empty-state hidden" id="empty-state">
+          <div class="empty-state-card">
+            <div class="empty-state-illustration" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <h2 class="empty-state-title">No projects yet</h2>
+            <p class="empty-state-text">
+              Drag and drop a PDF file here, or click the button below to create your first project.
+            </p>
+            <button class="toolbar-button toolbar-button--primary" id="btn-add-pdf-empty" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Create project
+            </button>
+          </div>
+        </div>
+
+        <div class="pdf-grid hidden" id="pdf-grid"></div>
+      </section>
     </main>
-
   </div>
 
   <!-- Project Modal -->
   <div class="modal-overlay" id="project-modal">
-    <div class="modal">
+    <div class="modal modal-home modal-home--form">
       <div class="modal-header">
-        <h3 class="modal-title" id="project-modal-title">New Project</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Project</span>
+          <h3 class="modal-title" id="project-modal-title">New Project</h3>
+        </div>
         <button class="modal-close" id="project-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -125,6 +235,7 @@
         </button>
       </div>
       <div class="modal-body">
+        <p class="modal-intro">Create or update a project with the same polished structure used in the dashboard.</p>
         <div class="form-group">
           <label class="form-label" for="project-name-input">Project name</label>
           <input class="input" id="project-name-input" type="text" placeholder="Defaults to the PDF name">
@@ -141,8 +252,8 @@
           <label class="form-label" for="project-submission-link-input">Submission link</label>
           <input class="input" id="project-submission-link-input" type="url" placeholder="https://...">
         </div>
-        <div class="project-first-paper" id="project-first-paper">
-          <span>First paper</span>
+        <div class="project-first-paper modal-inline-card" id="project-first-paper">
+          <span class="modal-inline-card__label">First paper</span>
           <strong id="project-first-paper-name"></strong>
         </div>
       </div>
@@ -155,9 +266,12 @@
 
   <!-- Paper Modal -->
   <div class="modal-overlay" id="paper-modal">
-    <div class="modal">
+    <div class="modal modal-home modal-home--form">
       <div class="modal-header">
-        <h3 class="modal-title" id="paper-modal-title">Edit Paper</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Paper</span>
+          <h3 class="modal-title" id="paper-modal-title">Edit Paper</h3>
+        </div>
         <button class="modal-close" id="paper-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -166,6 +280,7 @@
         </button>
       </div>
       <div class="modal-body">
+        <p class="modal-intro">Keep paper details aligned with the new project board layout.</p>
         <div class="form-group">
           <label class="form-label" for="paper-name-input">Paper name</label>
           <input class="input" id="paper-name-input" type="text" placeholder="Paper name">
@@ -174,8 +289,8 @@
           <label class="form-label" for="paper-deadline-input">Review deadline</label>
           <input class="input" id="paper-deadline-input" type="date">
         </div>
-        <div class="project-first-paper hidden" id="paper-source-file">
-          <span>Selected file</span>
+        <div class="project-first-paper modal-inline-card hidden" id="paper-source-file">
+          <span class="modal-inline-card__label">Selected file</span>
           <strong id="paper-source-file-name"></strong>
         </div>
       </div>
@@ -188,9 +303,12 @@
 
   <!-- Delete Confirmation Modal -->
   <div class="modal-overlay" id="delete-modal">
-    <div class="modal">
+    <div class="modal modal-home modal-home--warning">
       <div class="modal-header">
-        <h3 class="modal-title">Remove PDF</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Warning</span>
+          <h3 class="modal-title">Remove PDF</h3>
+        </div>
         <button class="modal-close" id="delete-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -200,18 +318,24 @@
       </div>
       <div class="modal-body">
         <div class="delete-modal-content">
-          <svg class="delete-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <h4 class="delete-modal-title">Remove "<span id="delete-pdf-name"></span>"?</h4>
-          <p class="delete-modal-text">
-            This will remove the PDF from your list. The original file will not be deleted.
-          </p>
-          <label class="delete-modal-checkbox">
+          <div class="modal-message-card modal-message-card--danger">
+            <div class="modal-message-card__icon">
+              <svg class="delete-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <div class="modal-message-card__copy">
+              <h4 class="delete-modal-title">Remove "<span id="delete-pdf-name"></span>"?</h4>
+              <p class="delete-modal-text">
+                This will remove the PDF from your list. The original file will not be deleted.
+              </p>
+            </div>
+          </div>
+          <label class="delete-modal-checkbox modal-check">
             <input type="checkbox" id="delete-annotations-checkbox" checked>
-            Also delete all annotations
+            <span>Also delete all annotations</span>
           </label>
         </div>
       </div>
@@ -224,9 +348,12 @@
 
   <!-- PDF Not Found Modal -->
   <div class="modal-overlay" id="pdf-not-found-modal">
-    <div class="modal">
+    <div class="modal modal-home modal-home--warning">
       <div class="modal-header">
-        <h3 class="modal-title">PDF File Not Found</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">File issue</span>
+          <h3 class="modal-title">PDF File Not Found</h3>
+        </div>
         <button class="modal-close" id="pdf-not-found-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -235,10 +362,21 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>Cannot find the PDF file at:</p>
-        <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 8px; margin: 12px 0; font-family: monospace; word-break: break-all; font-size: 13px;" id="pdf-not-found-path"></div>
-        <p style="margin-top: 12px;">The file may have been moved, renamed, or deleted.</p>
-        <p style="margin-top: 12px; font-weight: 500;" id="pdf-not-found-name"></p>
+        <div class="modal-message-card modal-message-card--warning">
+          <div class="modal-message-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div class="modal-message-card__copy">
+            <p class="modal-message-card__title">Cannot find the PDF file at:</p>
+            <div class="modal-code-block" id="pdf-not-found-path"></div>
+            <p class="modal-message-card__text">The file may have been moved, renamed, or deleted.</p>
+            <p class="modal-message-card__strong" id="pdf-not-found-name"></p>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pdf-not-found-cancel">Cancel</button>
@@ -249,9 +387,12 @@
 
   <!-- PDF Name Changed Warning Modal -->
   <div class="modal-overlay" id="pdf-name-changed-modal">
-    <div class="modal">
+    <div class="modal modal-home modal-home--warning">
       <div class="modal-header">
-        <h3 class="modal-title">PDF Name Changed</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">File issue</span>
+          <h3 class="modal-title">PDF Name Changed</h3>
+        </div>
         <button class="modal-close" id="pdf-name-changed-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -260,26 +401,28 @@
         </button>
       </div>
       <div class="modal-body">
-        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
-          <svg style="flex-shrink: 0; color: var(--color-warning); margin-top: 2px;" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          <div style="flex: 1;">
-            <p style="font-weight: 500; margin-bottom: 8px;">The PDF name has changed.</p>
-            <p style="margin-bottom: 12px;">If this is not the same PDF, existing annotations will not load correctly.</p>
+        <div class="modal-message-card modal-message-card--warning">
+          <div class="modal-message-card__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div class="modal-message-card__copy">
+            <p class="modal-message-card__title">The PDF name has changed.</p>
+            <p class="modal-message-card__text">If this is not the same PDF, existing annotations will not load correctly.</p>
           </div>
         </div>
-        <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Original:</div>
-          <div style="font-family: monospace; font-size: 13px;" id="pdf-name-original"></div>
+        <div class="modal-compare-block">
+          <div class="modal-compare-block__label">Original</div>
+          <div class="modal-code-block" id="pdf-name-original"></div>
         </div>
-        <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 8px;">
-          <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">New:</div>
-          <div style="font-family: monospace; font-size: 13px;" id="pdf-name-new"></div>
+        <div class="modal-compare-block">
+          <div class="modal-compare-block__label">New</div>
+          <div class="modal-code-block" id="pdf-name-new"></div>
         </div>
-        <p style="margin-top: 16px; font-weight: 500;">Do you want to continue?</p>
+        <p class="modal-confirm-copy">Do you want to continue?</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pdf-name-changed-cancel">Cancel</button>

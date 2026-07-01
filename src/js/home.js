@@ -9,15 +9,12 @@ const workerSrc = new URL('../vendor/pdfjs-dist/legacy/build/pdf.worker.min.mjs'
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // Constants
-const ITEMS_PER_PAGE = 15;
-
 // State
 let allPDFs = [];
 let allProjects = [];
 let filteredProjects = [];
-let currentPage = 1;
 let searchQuery = '';
-let completionFilter = 'all'; // 'all', 'completed', 'incomplete'
+let dashboardFilter = 'all'; // 'all', 'in-progress', 'completed'
 let deleteTargetId = null;
 let notFoundPdfId = null;
 let pendingNewPath = null;
@@ -31,18 +28,21 @@ let pendingPaperProjectId = null;
 const loadingState = document.getElementById('loading-state');
 const emptyState = document.getElementById('empty-state');
 const pdfGrid = document.getElementById('pdf-grid');
-const pagination = document.getElementById('pagination');
-const paginationInfo = document.getElementById('pagination-info');
-const btnPrev = document.getElementById('btn-prev');
-const btnNext = document.getElementById('btn-next');
 const searchInput = document.getElementById('search-input');
 const dropZone = document.getElementById('drop-zone');
 const btnAddPdf = document.getElementById('btn-add-pdf');
 const btnAddPdfEmpty = document.getElementById('btn-add-pdf-empty');
+const btnSidebarNewProject = document.getElementById('btn-sidebar-new-project');
+const btnProjectFilters = document.getElementById('btn-project-filters');
 const btnSettings = document.getElementById('btn-settings');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const toastContainer = document.getElementById('toast-container');
-const completionFilters = document.getElementById('completion-filters');
+const filtersPopover = document.getElementById('completion-filters');
+const sidebarFilterButtons = Array.from(document.querySelectorAll('.home-sidebar .sidebar-nav-item[data-filter]'));
+const filterButtons = Array.from(filtersPopover.querySelectorAll('.filter-btn'));
+const countInProgress = document.getElementById('count-in-progress');
+const countCompleted = document.getElementById('count-completed');
+const countPapers = document.getElementById('count-papers');
 
 const projectModal = document.getElementById('project-modal');
 const projectModalTitle = document.getElementById('project-modal-title');
@@ -115,13 +115,14 @@ async function loadPDFs() {
     filterAndRender();
   } catch (error) {
     console.error('Error loading projects:', error);
+    hideLoading();
+    showEmpty('Unable to load projects', 'Please try again in a moment.');
     showToast('Failed to load projects', 'error');
   }
 }
 
 // Filter and render PDFs
 function filterAndRender() {
-  // Apply search filter
   let filtered = [...allProjects];
 
   if (searchQuery) {
@@ -133,35 +134,30 @@ function filterAndRender() {
     );
   }
 
-  // Apply completion filter
-  if (completionFilter === 'completed') {
-    filtered = filtered.filter(project => project.completed === 1);
-  } else if (completionFilter === 'incomplete') {
-    filtered = filtered.filter(project => project.completed === 0 || !project.completed);
+  if (dashboardFilter === 'completed') {
+    filtered = filtered.filter(project => isProjectCompleted(project));
+  } else if (dashboardFilter === 'in-progress') {
+    filtered = filtered.filter(project => !isProjectCompleted(project));
   }
 
   filteredProjects = filtered;
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
-  currentPage = Math.min(currentPage, Math.max(1, totalPages));
-
-  // Get current page items
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageItems = filteredProjects.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Update UI
   hideLoading();
+  updateDashboardStats();
+  updateSidebarState();
 
   if (filteredProjects.length === 0) {
     if (searchQuery) {
-      showEmpty('No projects match your search');
+      showEmpty('No projects match your search', 'Try adjusting the search or filters, or create a new project.');
+    } else if (dashboardFilter === 'completed') {
+      showEmpty('No completed projects yet', 'Once a project is finished it will appear here.');
+    } else if (dashboardFilter === 'in-progress') {
+      showEmpty('No active projects', 'Create a new project to start organizing papers.');
     } else {
-      showEmpty();
+      showEmpty('No projects yet', 'Create your first project to start organizing papers and research notes.');
     }
   } else {
-    renderProjects(pageItems);
-    updatePagination(totalPages);
+    renderProjects(filteredProjects);
   }
 }
 
@@ -176,17 +172,28 @@ function renderProjects(projects) {
     card.project = project;
     pdfGrid.appendChild(card);
   });
-}
 
-// Update pagination controls
-function updatePagination(totalPages) {
-  paginationInfo.textContent = `${currentPage} / ${totalPages}`;
-  btnPrev.disabled = currentPage <= 1;
-  btnNext.disabled = currentPage >= totalPages;
+  const newProjectTile = document.createElement('button');
+  newProjectTile.type = 'button';
+  newProjectTile.className = 'project-grid-tile';
+  newProjectTile.setAttribute('aria-label', 'Create new project');
+  newProjectTile.innerHTML = `
+    <span class="project-grid-tile__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </span>
+    <span class="project-grid-tile__title">New project</span>
+    <span class="project-grid-tile__text">Create a project to organize your papers and research notes.</span>
+  `;
+  newProjectTile.addEventListener('click', handleAddPDF);
+  pdfGrid.appendChild(newProjectTile);
 }
 
 // Show/Hide states
 function showLoading() {
+  hideFiltersMenu();
   loadingState.classList.remove('hidden');
   emptyState.classList.add('hidden');
   pdfGrid.classList.add('hidden');
@@ -196,21 +203,67 @@ function hideLoading() {
   loadingState.classList.add('hidden');
 }
 
-function showEmpty(message) {
+function showEmpty(title = 'No projects yet', text = 'Drag and drop a PDF file here, or click the button below to get started.') {
+  hideFiltersMenu();
   emptyState.classList.remove('hidden');
   pdfGrid.classList.add('hidden');
-  updatePagination(1);
 
   const titleEl = emptyState.querySelector('.empty-state-title');
   const textEl = emptyState.querySelector('.empty-state-text');
 
-  if (message) {
-    titleEl.textContent = message;
-    textEl.textContent = 'Try adjusting your search or add a new project.';
-  } else {
-    titleEl.textContent = 'No projects yet';
-    textEl.textContent = 'Drag and drop a PDF file here, or click the "Add Project" button to get started.';
+  titleEl.textContent = title;
+  textEl.textContent = text;
+}
+
+function isProjectCompleted(project) {
+  if (project.completed === 1) {
+    return true;
   }
+
+  const papers = Array.isArray(project.papers) ? project.papers : [];
+  return papers.length > 0 && papers.every(paper => paper.completed === 1);
+}
+
+function updateDashboardStats() {
+  const completedCount = allProjects.filter(project => isProjectCompleted(project)).length;
+  const inProgressCount = allProjects.length - completedCount;
+  const paperCount = allPDFs.length;
+
+  if (countCompleted) countCompleted.textContent = completedCount;
+  if (countInProgress) countInProgress.textContent = inProgressCount;
+  if (countPapers) countPapers.textContent = paperCount;
+}
+
+function updateSidebarState() {
+  sidebarFilterButtons.forEach(button => {
+    const isActive = button.dataset.filter === dashboardFilter;
+    button.classList.toggle('is-active', isActive);
+  });
+
+  filterButtons.forEach(button => {
+    const isActive = button.dataset.filter === dashboardFilter;
+    button.classList.toggle('active', isActive);
+  });
+}
+
+function setDashboardFilter(filter) {
+  dashboardFilter = filter;
+  updateSidebarState();
+  hideFiltersMenu();
+  filterAndRender();
+}
+
+function toggleFiltersMenu(forceOpen) {
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : filtersPopover.classList.contains('hidden');
+  if (shouldOpen) {
+    filtersPopover.classList.remove('hidden');
+  } else {
+    hideFiltersMenu();
+  }
+}
+
+function hideFiltersMenu() {
+  filtersPopover.classList.add('hidden');
 }
 
 // Add PDF handler
@@ -666,7 +719,6 @@ async function handleDrop(e) {
 // Search handler
 const handleSearch = debounce((query) => {
   searchQuery = query;
-  currentPage = 1;
   filterAndRender();
 }, 300);
 
@@ -716,18 +768,21 @@ function updateThemeIcon() {
   const preference = ThemeManager.getPreference();
   const currentTheme = ThemeManager.getCurrentTheme();
 
-  let icon, title;
+  const lightActive = currentTheme === 'light';
+  const darkActive = currentTheme === 'dark';
+  const title = currentTheme === 'light'
+    ? (preference === 'auto' ? 'Theme: Auto (Light)' : 'Theme: Light')
+    : (preference === 'auto' ? 'Theme: Auto (Dark)' : 'Theme: Dark');
 
-  // Show icon representing the CURRENT active theme
-  if (currentTheme === 'light') {
-    icon = getSunIcon();
-    title = preference === 'auto' ? 'Theme: Auto (Light)' : 'Theme: Light';
-  } else {
-    icon = getMoonIcon();
-    title = preference === 'auto' ? 'Theme: Auto (Dark)' : 'Theme: Dark';
-  }
-
-  btnThemeToggle.innerHTML = icon;
+  btnThemeToggle.innerHTML = `
+    <span class="theme-toggle-icon ${lightActive ? 'is-active' : ''}" aria-hidden="true">
+      ${getSunIcon()}
+    </span>
+    <span class="theme-toggle-divider" aria-hidden="true"></span>
+    <span class="theme-toggle-icon ${darkActive ? 'is-active' : ''}" aria-hidden="true">
+      ${getMoonIcon()}
+    </span>
+  `;
   btnThemeToggle.title = title;
 }
 
@@ -763,25 +818,11 @@ function setupEventListeners() {
   // Add PDF buttons
   btnAddPdf.addEventListener('click', handleAddPDF);
   btnAddPdfEmpty.addEventListener('click', handleAddPDF);
+  btnSidebarNewProject?.addEventListener('click', handleAddPDF);
+  btnProjectFilters?.addEventListener('click', () => toggleFiltersMenu());
 
   // Search
   searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
-
-  // Pagination
-  btnPrev.addEventListener('click', () => {
-    if (currentPage > 1) {
-      currentPage--;
-      filterAndRender();
-    }
-  });
-
-  btnNext.addEventListener('click', () => {
-    const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
-    if (currentPage < totalPages) {
-      currentPage++;
-      filterAndRender();
-    }
-  });
 
   // Drag and drop
   dropZone.addEventListener('dragover', handleDragOver);
@@ -876,21 +917,35 @@ function setupEventListeners() {
     handleDeletePDF(id, name);
   });
 
-  // Completion filter buttons
-  const filterButtons = completionFilters.querySelectorAll('.filter-btn');
+  // Dashboard sidebar filters
+  sidebarFilterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+      if (filter) {
+        setDashboardFilter(filter);
+      } else {
+        handleAddPDF();
+      }
+    });
+  });
+
+  // Toolbar filter buttons
   filterButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter;
-      completionFilter = filter;
-      currentPage = 1;
-
-      // Update active state
-      filterButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Re-render
-      filterAndRender();
+      if (filter) {
+        setDashboardFilter(filter);
+      }
     });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!btnProjectFilters || !filtersPopover) return;
+    if (filtersPopover.classList.contains('hidden')) return;
+    const clickedInside = filtersPopover.contains(event.target) || btnProjectFilters.contains(event.target);
+    if (!clickedInside) {
+      hideFiltersMenu();
+    }
   });
 }
 
@@ -907,6 +962,11 @@ function setupKeyboardShortcuts() {
 
     // Escape: Close modal
     if (e.key === 'Escape') {
+      if (!filtersPopover.classList.contains('hidden')) {
+        hideFiltersMenu();
+        return;
+      }
+
       if (pdfNameChangedModal.classList.contains('active')) {
         closePDFNameChangedModal();
       } else if (pdfNotFoundModal.classList.contains('active')) {
