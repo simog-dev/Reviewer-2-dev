@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: file:; img-src 'self' data: blob:">
   <title>Reviewer 2 - Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/settings.css">
 </head>
-<body>
+<body class="settings-page">
   <div class="settings-container">
     <header class="settings-header">
       <button class="btn btn-ghost btn-back" id="btn-back" title="Back to Home">
@@ -17,7 +20,11 @@
         </svg>
         Back
       </button>
-      <span class="settings-title">Settings</span>
+      <div class="settings-header-copy">
+        <span class="settings-kicker">Workspace</span>
+        <span class="settings-title">Settings</span>
+        <p class="settings-subtitle">Configure your review workflow, AI generation, and annotation categories.</p>
+      </div>
     </header>
 
     <div class="settings-body">
@@ -25,7 +32,11 @@
 
         <!-- Highlight Categories Section -->
         <div class="settings-section">
-          <div class="settings-section-title">Highlight Categories</div>
+          <div class="settings-section-head">
+            <div class="settings-section-kicker">Annotations</div>
+            <div class="settings-section-title">Highlight Categories</div>
+            <p class="settings-section-text">Manage the labels available while reviewing papers and control which ones stay active.</p>
+          </div>
           <div class="category-limits-hint" id="category-limits-hint"></div>
           <div class="category-list" id="category-list"></div>
           <button class="btn btn-secondary btn-add-category" id="btn-add-category">
@@ -38,7 +49,11 @@
 
         <!-- LLM / AI Section -->
         <div class="settings-section">
-          <div class="settings-section-title">AI Review Generation</div>
+          <div class="settings-section-head">
+            <div class="settings-section-kicker">AI</div>
+            <div class="settings-section-title">AI Review Generation</div>
+            <p class="settings-section-text">Choose the provider settings and define the prompt used to generate final review drafts.</p>
+          </div>
 
           <div class="form-group">
             <label class="form-label" for="api-key-input">API Key</label>
@@ -101,9 +116,12 @@
 
   <!-- Rename Category Confirmation Modal -->
   <div class="modal-overlay" id="rename-modal">
-    <div class="modal">
+    <div class="modal modal-settings">
       <div class="modal-header">
-        <h3 class="modal-title">Rename Category</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Confirmation</span>
+          <h3 class="modal-title">Rename Category</h3>
+        </div>
         <button class="modal-close" id="rename-modal-close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -112,7 +130,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <p id="rename-modal-message"></p>
+        <p class="modal-message" id="rename-modal-message"></p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="rename-modal-cancel">Cancel</button>

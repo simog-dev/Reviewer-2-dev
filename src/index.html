@@ -235,7 +235,6 @@
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-intro">Create or update a project with the same polished structure used in the dashboard.</p>
         <div class="form-group">
           <label class="form-label" for="project-name-input">Project name</label>
           <input class="input" id="project-name-input" type="text" placeholder="Defaults to the PDF name">
@@ -252,9 +251,50 @@
           <label class="form-label" for="project-submission-link-input">Submission link</label>
           <input class="input" id="project-submission-link-input" type="url" placeholder="https://...">
         </div>
-        <div class="project-first-paper modal-inline-card" id="project-first-paper">
-          <span class="modal-inline-card__label">First paper</span>
-          <strong id="project-first-paper-name"></strong>
+        <div class="project-first-paper modal-upload-zone" id="project-first-paper">
+          <div class="modal-upload-zone__empty">
+            <div class="modal-upload-zone__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M7 3.75h6l4 4v12.5a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 5 20.25V5.5A1.75 1.75 0 0 1 6.75 3.75Z"/>
+                <path d="M13 3.75v4h4"/>
+                <path d="M12 17v-6"/>
+                <path d="M9.5 13.5 12 11l2.5 2.5"/>
+              </svg>
+            </div>
+            <div class="modal-upload-zone__title" id="project-first-paper-title">Drag and drop your paper here</div>
+            <div class="modal-upload-zone__divider" id="project-first-paper-divider">or</div>
+            <button class="btn btn-secondary modal-upload-zone__action" id="project-select-paper" type="button">Select file</button>
+            <div class="modal-upload-zone__hint" id="project-first-paper-hint">Choose the first paper for this project.</div>
+          </div>
+          <div class="modal-upload-zone__selected">
+            <div class="modal-upload-zone__file-card">
+              <div class="modal-upload-zone__file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M7 3.75h6l4 4v12.5a1.75 1.75 0 0 1-1.75 1.75h-8.5A1.75 1.75 0 0 1 5 20.25V5.5A1.75 1.75 0 0 1 6.75 3.75Z"/>
+                  <path d="M13 3.75v4h4"/>
+                  <path d="M8.5 16.75 10 12.5l2 4 2-2 1.5 2.25"/>
+                </svg>
+              </div>
+              <div class="modal-upload-zone__file-copy">
+                <div class="modal-upload-zone__filename" id="project-first-paper-name"></div>
+                <div class="modal-upload-zone__file-meta" id="project-first-paper-meta"></div>
+              </div>
+            </div>
+
+            <button class="modal-upload-zone__replace-zone" id="project-select-paper-alt" type="button">
+              <span class="modal-upload-zone__replace-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 16V8"/>
+                  <path d="M8.5 11.5 12 8l3.5 3.5"/>
+                  <path d="M6 15.5v2.25A1.25 1.25 0 0 0 7.25 19h9.5A1.25 1.25 0 0 0 18 17.75V15.5"/>
+                </svg>
+              </span>
+              <span class="modal-upload-zone__replace-copy">
+                <span class="modal-upload-zone__replace-line">Drop another PDF here to replace it</span>
+                <span class="modal-upload-zone__replace-line">or <span class="modal-upload-zone__replace-link">select from your device</span></span>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

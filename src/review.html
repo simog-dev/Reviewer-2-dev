@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: file:; img-src 'self' data: blob:; frame-src https:; connect-src 'self' https://generativelanguage.googleapis.com">
   <title>Reviewer 2 - Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/review.css">
 </head>
-<body>
+<body class="review-page">
   <div class="review-container">
     <!-- Toolbar -->
     <header class="toolbar">
@@ -88,7 +91,7 @@
 
       <div class="toolbar-right">
         <!-- Theme Toggle -->
-        <button id="btn-theme-toggle" class="btn btn-ghost btn-icon" title="Theme">
+        <button id="btn-theme-toggle" class="theme-toggle" title="Theme">
           <!-- Icon will be updated dynamically by JS -->
         </button>
 
@@ -204,8 +207,8 @@
             <button class="btn btn-secondary btn-import" id="btn-import" title="Import Annotations">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               Import
             </button>
@@ -214,8 +217,8 @@
               <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
                 Export
               </button>
@@ -420,8 +423,8 @@
               <button class="btn btn-secondary btn-review-export" id="btn-review-export" title="Export Review">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
                 Export
               </button>

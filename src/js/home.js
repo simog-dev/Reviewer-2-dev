@@ -1,5 +1,5 @@
 import '../components/project-card.js';
-import { debounce } from './utils.js';
+import { debounce, formatFileSize } from './utils.js';
 import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import * as pdfjsLib from '../vendor/pdfjs-dist/legacy/build/pdf.min.mjs';
 import ThemeManager from './theme-manager.js';
@@ -19,6 +19,7 @@ let deleteTargetId = null;
 let notFoundPdfId = null;
 let pendingNewPath = null;
 let pendingProjectFilePath = null;
+let pendingProjectFileDetails = null;
 let editingProjectId = null;
 let editingPaperId = null;
 let pendingPaperFilePath = null;
@@ -55,6 +56,12 @@ const projectDeadlineInput = document.getElementById('project-deadline-input');
 const projectSubmissionLinkInput = document.getElementById('project-submission-link-input');
 const projectFirstPaper = document.getElementById('project-first-paper');
 const projectFirstPaperName = document.getElementById('project-first-paper-name');
+const projectFirstPaperMeta = document.getElementById('project-first-paper-meta');
+const projectFirstPaperTitle = document.getElementById('project-first-paper-title');
+const projectFirstPaperDivider = document.getElementById('project-first-paper-divider');
+const projectFirstPaperHint = document.getElementById('project-first-paper-hint');
+const projectSelectPaperBtn = document.getElementById('project-select-paper');
+const projectSelectPaperAltBtn = document.getElementById('project-select-paper-alt');
 
 const paperModal = document.getElementById('paper-modal');
 const paperModalTitle = document.getElementById('paper-modal-title');
@@ -269,10 +276,7 @@ function hideFiltersMenu() {
 // Add PDF handler
 async function handleAddPDF() {
   try {
-    const filePath = await window.api.openPDFDialog();
-    if (!filePath) return;
-
-    showProjectModal(filePath);
+    showProjectModal();
   } catch (error) {
     console.error('Error adding project:', error);
     showToast('Failed to add project', 'error');
@@ -282,18 +286,17 @@ async function handleAddPDF() {
 function showProjectModal(filePath) {
   resetDraggableModal(projectModal);
   editingProjectId = null;
-  pendingProjectFilePath = filePath;
   projectModalTitle.textContent = 'New Project';
   projectModalConfirm.textContent = 'Create Project';
   projectDeadlineInput.closest('.form-group').classList.remove('hidden');
   projectFirstPaper.classList.remove('hidden');
-  projectFirstPaperName.textContent = filePath.split(/[/\\]/).pop();
   projectNameInput.placeholder = 'Defaults to the PDF name';
   projectNameInput.value = '';
   projectConferenceInput.value = '';
   projectDeadlineInput.value = '';
   projectSubmissionLinkInput.value = '';
   projectModal.classList.add('active');
+  setPendingProjectPaper(filePath || null);
   projectNameInput.focus();
 }
 
@@ -301,6 +304,7 @@ function showProjectEditModal(project) {
   resetDraggableModal(projectModal);
   editingProjectId = project.id;
   pendingProjectFilePath = null;
+  pendingProjectFileDetails = null;
   projectModalTitle.textContent = 'Edit Project';
   projectModalConfirm.textContent = 'Save Changes';
   projectDeadlineInput.closest('.form-group').classList.add('hidden');
@@ -318,6 +322,7 @@ function showProjectEditModal(project) {
 function closeProjectModal() {
   projectModal.classList.remove('active');
   pendingProjectFilePath = null;
+  pendingProjectFileDetails = null;
   editingProjectId = null;
 }
 
@@ -357,7 +362,11 @@ async function confirmProjectEdit() {
 }
 
 async function confirmProjectCreate() {
-  if (!pendingProjectFilePath) return;
+  if (!pendingProjectFilePath) {
+    showToast('Select a paper before creating the project', 'warning');
+    projectSelectPaperBtn?.focus();
+    return;
+  }
 
   const filePath = pendingProjectFilePath;
   const options = {
@@ -374,6 +383,160 @@ async function confirmProjectCreate() {
   } catch (error) {
     console.error('Error creating project:', error);
     showToast('Failed to create project: ' + error.message, 'error');
+  }
+}
+
+function updateProjectFirstPaperUI() {
+  const hasSelectedPaper = Boolean(pendingProjectFilePath);
+  const fileName = pendingProjectFileDetails?.name || (hasSelectedPaper ? pendingProjectFilePath.split(/[/\\]/).pop() : '');
+  const fileMeta = hasSelectedPaper
+    ? buildProjectPaperMetaLabel(pendingProjectFileDetails)
+    : '';
+
+  if (projectFirstPaperTitle) {
+    projectFirstPaperTitle.textContent = hasSelectedPaper ? 'Paper selected' : 'Drag and drop your paper here';
+  }
+
+  if (projectFirstPaperDivider) {
+    projectFirstPaperDivider.textContent = 'or';
+  }
+
+  if (projectSelectPaperBtn) {
+    projectSelectPaperBtn.textContent = 'Select file';
+  }
+
+  if (projectFirstPaperHint) {
+    projectFirstPaperHint.textContent = hasSelectedPaper
+      ? 'You can drop another PDF below or select one from your device.'
+      : 'Choose the first paper for this project.';
+  }
+
+  projectFirstPaperName.textContent = fileName;
+  if (projectFirstPaperMeta) {
+    projectFirstPaperMeta.textContent = fileMeta;
+  }
+  projectFirstPaper?.classList.toggle('has-file', hasSelectedPaper);
+}
+
+function buildProjectPaperMetaLabel(details) {
+  if (!details) return 'Loading details...';
+
+  const parts = [];
+  if (typeof details.pageCount === 'number') {
+    parts.push(`${details.pageCount} page${details.pageCount === 1 ? '' : 's'}`);
+  }
+  if (typeof details.size === 'number') {
+    parts.push(formatFileSize(details.size));
+  }
+
+  return parts.join(' • ') || 'Loading details...';
+}
+
+async function setPendingProjectPaper(filePath) {
+  pendingProjectFilePath = filePath || null;
+  pendingProjectFileDetails = null;
+
+  if (!pendingProjectFilePath) {
+    updateProjectFirstPaperUI();
+    return;
+  }
+
+  const fallbackName = pendingProjectFilePath.split(/[/\\]/).pop();
+  pendingProjectFileDetails = {
+    name: fallbackName
+  };
+  updateProjectFirstPaperUI();
+
+  try {
+    const metadata = await window.api.getPDFMetadata(pendingProjectFilePath);
+    const pdfData = await window.api.readPDFFile(pendingProjectFilePath);
+    const pageCount = await getPDFPageCount(pdfData);
+
+    pendingProjectFileDetails = {
+      name: metadata?.name || fallbackName,
+      pageCount,
+      size: metadata?.size ?? inferBinarySize(pdfData)
+    };
+  } catch (error) {
+    console.error('Error loading project paper details:', error);
+    pendingProjectFileDetails = {
+      name: fallbackName
+    };
+  }
+
+  updateProjectFirstPaperUI();
+}
+
+function inferBinarySize(data) {
+  if (ArrayBuffer.isView(data)) {
+    return data.byteLength;
+  }
+  if (data instanceof ArrayBuffer) {
+    return data.byteLength;
+  }
+  if (typeof data === 'object' && Array.isArray(data?.data)) {
+    return data.data.length;
+  }
+  return null;
+}
+
+async function resolveProjectPaperPathFromFile(file) {
+  if (file.path) {
+    return file.path;
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const data = new Uint8Array(arrayBuffer);
+  return window.api.addPDFFromData(file.name, data);
+}
+
+async function handleProjectPaperSelection() {
+  try {
+    const filePath = await window.api.openPDFDialog();
+    if (!filePath) return;
+
+    await setPendingProjectPaper(filePath);
+
+    if (!projectNameInput.value.trim()) {
+      projectNameInput.placeholder = 'Defaults to the PDF name';
+    }
+  } catch (error) {
+    console.error('Error selecting paper for project:', error);
+    showToast('Failed to select paper', 'error');
+  }
+}
+
+function handleProjectPaperDragOver(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  projectFirstPaper?.classList.add('is-drag-over');
+}
+
+function handleProjectPaperDragLeave(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  projectFirstPaper?.classList.remove('is-drag-over');
+}
+
+async function handleProjectPaperDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  projectFirstPaper?.classList.remove('is-drag-over');
+
+  const files = Array.from(event.dataTransfer?.files || []);
+  const pdfFile = files.find(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+
+  if (!pdfFile) {
+    showToast('Please drop a PDF file', 'warning');
+    return;
+  }
+
+  try {
+    const filePath = await resolveProjectPaperPathFromFile(pdfFile);
+    await setPendingProjectPaper(filePath);
+  } catch (error) {
+    console.error('Error processing dropped paper for project:', error);
+    showToast('Failed to select paper', 'error');
   }
 }
 
@@ -841,6 +1004,11 @@ function setupEventListeners() {
   projectModalClose.addEventListener('click', closeProjectModal);
   projectModalCancel.addEventListener('click', closeProjectModal);
   projectModalConfirm.addEventListener('click', confirmProjectModal);
+  projectSelectPaperBtn?.addEventListener('click', handleProjectPaperSelection);
+  projectSelectPaperAltBtn?.addEventListener('click', handleProjectPaperSelection);
+  projectFirstPaper?.addEventListener('dragover', handleProjectPaperDragOver);
+  projectFirstPaper?.addEventListener('dragleave', handleProjectPaperDragLeave);
+  projectFirstPaper?.addEventListener('drop', handleProjectPaperDrop);
   projectModal.addEventListener('click', (e) => {
     if (e.target === projectModal) closeProjectModal();
   });

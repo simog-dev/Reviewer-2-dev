@@ -2726,18 +2726,21 @@ function updateThemeIcon() {
   const preference = ThemeManager.getPreference();
   const currentTheme = ThemeManager.getCurrentTheme();
 
-  let icon, title;
+  const lightActive = currentTheme === 'light';
+  const darkActive = currentTheme === 'dark';
+  const title = currentTheme === 'light'
+    ? (preference === 'auto' ? 'Theme: Auto (Light)' : 'Theme: Light')
+    : (preference === 'auto' ? 'Theme: Auto (Dark)' : 'Theme: Dark');
 
-  // Show icon representing the CURRENT active theme
-  if (currentTheme === 'light') {
-    icon = getSunIcon();
-    title = preference === 'auto' ? 'Theme: Auto (Light)' : 'Theme: Light';
-  } else {
-    icon = getMoonIcon();
-    title = preference === 'auto' ? 'Theme: Auto (Dark)' : 'Theme: Dark';
-  }
-
-  btnThemeToggle.innerHTML = icon;
+  btnThemeToggle.innerHTML = `
+    <span class="theme-toggle-icon ${lightActive ? 'is-active' : ''}" aria-hidden="true">
+      ${getSunIcon()}
+    </span>
+    <span class="theme-toggle-divider" aria-hidden="true"></span>
+    <span class="theme-toggle-icon ${darkActive ? 'is-active' : ''}" aria-hidden="true">
+      ${getMoonIcon()}
+    </span>
+  `;
   btnThemeToggle.title = title;
 }
 
