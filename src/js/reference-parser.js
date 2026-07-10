@@ -268,6 +268,7 @@ function groupFlatItemsIntoLines(flatItems, yTolerance = 3) {
         startIndex: entry.globalIndex ?? entry.index ?? itemIndex,
         endIndex: entry.globalIndex ?? entry.index ?? itemIndex,
         minX: x,
+        maxX: x + (entry.item.width || 0),
         parts: []
       };
       lines.push(currentLine);
@@ -275,7 +276,8 @@ function groupFlatItemsIntoLines(flatItems, yTolerance = 3) {
 
     currentLine.endIndex = entry.globalIndex ?? entry.index ?? itemIndex;
     currentLine.minX = Math.min(currentLine.minX, x);
-    currentLine.parts.push({ x, text });
+    currentLine.maxX = Math.max(currentLine.maxX, x + (entry.item.width || 0));
+    currentLine.parts.push({ x, text, item: entry.item });
   }
 
   return lines.map(line => ({
@@ -284,6 +286,8 @@ function groupFlatItemsIntoLines(flatItems, yTolerance = 3) {
     startIndex: line.startIndex,
     endIndex: line.endIndex,
     minX: line.minX,
+    maxX: line.maxX,
+    items: line.parts.map(part => part.item),
     text: line.parts
       .sort((a, b) => a.x - b.x)
       .reduce((acc, part) => {
@@ -292,6 +296,165 @@ function groupFlatItemsIntoLines(flatItems, yTolerance = 3) {
         return acc + (shouldAddSpace(acc, trimmed) ? ' ' : '') + trimmed;
       }, '')
   }));
+}
+
+function normalizeBoilerplateText(text) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, '<url>')
+    .replace(/\b\d+\b/g, '<n>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function groupLinesByPage(lines) {
+  const pages = new Map();
+  for (const line of lines) {
+    if (!pages.has(line.pageNum)) pages.set(line.pageNum, []);
+    pages.get(line.pageNum).push(line);
+  }
+  return pages;
+}
+
+function joinTextItems(items) {
+  return items
+    .map(item => ({
+      item,
+      x: item.transform ? item.transform[4] : 0,
+      text: item.str || ''
+    }))
+    .sort((a, b) => a.x - b.x)
+    .reduce((text, part) => {
+      const trimmed = part.text.trim();
+      if (!trimmed) return text;
+      return text + (shouldAddSpace(text, trimmed) ? ' ' : '') + trimmed;
+    }, '');
+}
+
+function isSplitReferenceLabelItem(item, line) {
+  const orderedItems = [...line.items].sort((a, b) => {
+    const ax = a.transform ? a.transform[4] : 0;
+    const bx = b.transform ? b.transform[4] : 0;
+    return ax - bx;
+  });
+  const index = orderedItems.indexOf(item);
+  const previous = orderedItems[index - 1]?.str?.trim() || '';
+  const next = orderedItems[index + 1]?.str?.trim() || '';
+  return ((previous === '[' && next === ']') || next === '.' || next === ')');
+}
+
+function stripNumericGutters(lines) {
+  const pageLines = groupLinesByPage(lines);
+
+  for (const siblings of pageLines.values()) {
+    const numericItems = siblings.flatMap(line => line.items
+      .filter(item =>
+        /^\d{1,3}$/.test((item.str || '').trim()) &&
+        !isSplitReferenceLabelItem(item, line)
+      )
+      .map(item => ({
+        item,
+        x: item.transform ? item.transform[4] : 0
+      }))
+    );
+    const xClusters = [];
+
+    for (const entry of numericItems) {
+      let cluster = xClusters.find(candidate => Math.abs(candidate.x - entry.x) <= 8);
+      if (!cluster) {
+        cluster = { x: entry.x, entries: [] };
+        xClusters.push(cluster);
+      }
+      cluster.entries.push(entry);
+      cluster.x = cluster.entries.reduce((sum, candidate) => sum + candidate.x, 0) / cluster.entries.length;
+    }
+
+    const gutterItems = new Set();
+    for (const cluster of xClusters) {
+      const distinctNumbers = new Set(cluster.entries.map(entry => Number(entry.item.str.trim())));
+      if (cluster.entries.length >= 5 && distinctNumbers.size >= 5) {
+        cluster.entries.forEach(entry => gutterItems.add(entry.item));
+      }
+    }
+
+    if (gutterItems.size === 0) continue;
+    for (const line of siblings) {
+      line.items = line.items.filter(item => !gutterItems.has(item));
+      line.text = joinTextItems(line.items);
+      if (line.items.length > 0) {
+        line.minX = Math.min(...line.items.map(item => item.transform ? item.transform[4] : 0));
+        line.maxX = Math.max(...line.items.map(item => {
+          const x = item.transform ? item.transform[4] : 0;
+          return x + (item.width || 0);
+        }));
+      }
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * Identifies page furniture from layout, repetition and numeric gutter columns.
+ * This happens before references are segmented so artifacts cannot become part
+ * of a reference merely because they occur between two bibliography labels.
+ */
+function classifyPageArtifacts(lines) {
+  const artifacts = new Set();
+  const pageLines = groupLinesByPage(lines);
+  const repeated = new Map();
+
+  for (const line of lines) {
+    const normalized = normalizeBoilerplateText(line.text);
+    if (!normalized) continue;
+    if (!repeated.has(normalized)) repeated.set(normalized, []);
+    repeated.get(normalized).push(line);
+
+    if (/for\s+peer\s+review|\bconfidential\b/i.test(line.text)) {
+      artifacts.add(line);
+    }
+  }
+
+  // Headers and footers commonly repeat at the same approximate Y position.
+  for (const occurrences of repeated.values()) {
+    const pages = new Set(occurrences.map(line => line.pageNum));
+    if (pages.size < 2) continue;
+
+    for (const line of occurrences) {
+      const siblings = pageLines.get(line.pageNum) || [];
+      const ys = siblings.map(candidate => candidate.y).filter(Number.isFinite);
+      if (ys.length === 0 || !Number.isFinite(line.y)) continue;
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      const edgeSize = Math.max((maxY - minY) * 0.15, 24);
+      if (line.y <= minY + edgeSize || line.y >= maxY - edgeSize) {
+        artifacts.add(line);
+      }
+    }
+  }
+
+  for (const siblings of pageLines.values()) {
+    // A page marker anchors a local block of publisher furniture. URL/email
+    // fields are removed only inside that block, so URLs in references survive.
+    const pageMarkers = siblings.filter(line =>
+      /^page\s+\d+(?:\s+of\s+\d+)?$/i.test(line.text.trim()) ||
+      /^\d{1,3}\s+page\s+\d{1,3}(?:\s+of\s+\d{1,3})?$/i.test(line.text.trim())
+    );
+
+    for (const marker of pageMarkers) {
+      artifacts.add(marker);
+      if (!Number.isFinite(marker.y)) continue;
+      for (const line of siblings) {
+        if (!Number.isFinite(line.y) || Math.abs(line.y - marker.y) > 48) continue;
+        if (/^(?:url|email)\s*:/i.test(line.text.trim()) ||
+            /for\s+peer\s+review/i.test(line.text)) {
+          artifacts.add(line);
+        }
+      }
+    }
+  }
+
+  return artifacts;
 }
 
 /**
@@ -385,10 +548,26 @@ function detectReferenceFormat(flatItems) {
   return 'bracket';
 }
 
-function extractReferencesFromLineGroups(flatItems, refFormat) {
+function detectReferenceFormatFromLines(lines) {
+  let bracketCount = 0;
+  let dotCount = 0;
+
+  for (const line of lines.slice(0, 30)) {
+    if (getReferenceStartMatchInText(line.text, 'bracket')) bracketCount++;
+    if (getReferenceStartMatchInText(line.text, 'dot')) dotCount++;
+  }
+
+  if (bracketCount === 0 && dotCount === 0) return null;
+  return dotCount > bracketCount ? 'dot' : 'bracket';
+}
+
+function extractReferencesFromLineGroups(flatItems) {
   const references = new Map();
   const refPages = new Set();
-  const lines = groupFlatItemsIntoLines(flatItems);
+  const lines = stripNumericGutters(groupFlatItemsIntoLines(flatItems));
+  const artifactLines = classifyPageArtifacts(lines);
+  const contentLines = lines.filter(line => line.text.trim() && !artifactLines.has(line));
+  const refFormat = detectReferenceFormatFromLines(contentLines) || detectReferenceFormat(flatItems);
   const refLinePositions = [];
   let numberingX = null;
   let reachedEnd = false;
@@ -396,7 +575,7 @@ function extractReferencesFromLineGroups(flatItems, refFormat) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedText = line.text.trim();
-    if (!trimmedText) continue;
+    if (!trimmedText || artifactLines.has(line)) continue;
 
     for (const endPattern of REFERENCE_SECTION_END_PATTERNS) {
       if (endPattern.test(trimmedText)) {
@@ -437,7 +616,7 @@ function extractReferencesFromLineGroups(flatItems, refFormat) {
   }
 
   if (refLinePositions.length === 0) {
-    return { references, refPages };
+    return { references, refPages, refFormat };
   }
 
   for (let i = 0; i < refLinePositions.length; i++) {
@@ -452,7 +631,7 @@ function extractReferencesFromLineGroups(flatItems, refFormat) {
     for (let j = startLineIndex; j < endLineIndex; j++) {
       const line = lines[j];
       const text = line.text.trim();
-      if (!text) continue;
+      if (!text || artifactLines.has(line)) continue;
 
       let hitSectionEnd = false;
       if (j > startLineIndex) {
@@ -484,7 +663,7 @@ function extractReferencesFromLineGroups(flatItems, refFormat) {
     }
   }
 
-  return { references, refPages };
+  return { references, refPages, refFormat };
 }
 
 /**
@@ -677,12 +856,8 @@ export async function extractReferencesFromPages(pdfDocument) {
     }
   }
 
-  // Detect reference numbering format by scanning the start of the references
-  // section. This must happen BEFORE the full pass to avoid matching inline
-  // citations [N] that appear inside dot-formatted reference text.
-  const refFormat = detectReferenceFormat(flatItems);
-
-  const lineBasedResult = extractReferencesFromLineGroups(flatItems, refFormat);
+  const lineBasedResult = extractReferencesFromLineGroups(flatItems);
+  const refFormat = lineBasedResult.refFormat;
   if (lineBasedResult.references.size > 0) {
     const pageContentBands = new Map();
     for (const { pageNum, items } of allTextContent) {
@@ -914,10 +1089,8 @@ function extractReferencesHeuristic(allTextContent) {
     }
   }
 
-  // Detect reference numbering format by scanning the first items.
-  const refFormat = detectReferenceFormat(flatItems);
-
-  const lineBasedResult = extractReferencesFromLineGroups(flatItems, refFormat);
+  const lineBasedResult = extractReferencesFromLineGroups(flatItems);
+  const refFormat = lineBasedResult.refFormat;
   if (lineBasedResult.references.size > 0) {
     const pageContentBands = new Map();
     for (const { pageNum, items } of lastPages) {
