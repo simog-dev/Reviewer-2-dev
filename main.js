@@ -7,6 +7,20 @@ const Database = require('./src/database/db');
 let mainWindow;
 let db;
 
+function initializeDatabase() {
+  if (!db) {
+    db = new Database(dbPath);
+  }
+  return db;
+}
+
+function closeDatabase() {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
 function escapeHtml(text = '') {
   return String(text)
     .replace(/&/g, '&amp;')
@@ -52,7 +66,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   // Initialize database
-  db = new Database(dbPath);
+  initializeDatabase();
 
   createWindow();
 
@@ -114,18 +128,20 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
+      initializeDatabase();
       createWindow();
     }
   });
 });
 
 app.on('window-all-closed', () => {
-  if (db) {
-    db.close();
-  }
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  closeDatabase();
 });
 
 // IPC Handlers
