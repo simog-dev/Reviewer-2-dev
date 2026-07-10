@@ -1743,7 +1743,7 @@ html[data-theme="dark"] body.review-page {
 
 .review-page .toolbar {
   gap: 16px;
-  padding: 18px 22px 14px;
+  padding: 10px 22px 10px;
   background: transparent;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
 }
@@ -1842,6 +1842,10 @@ html[data-theme="dark"] .review-page .btn-back:hover:not(:disabled) {
     /* min-width: 72px; */
     /* padding-inline: 6px 22px; */
     text-align: center;
+}
+
+.btn-zoom{
+  border-radius: 10px;
 }
 
 .review-page .btn-zoom {
@@ -2387,4 +2391,111 @@ html[data-theme="dark"] .review-page .selected-text-preview {
   .review-page .modal-overlay {
     padding: 12px;
   }
+}
+
+/* Make annotation sorting and panel resizing visibly interactive. */
+.review-page .annotation-panel-header .sort-container {
+  margin-left: auto;
+  padding: 2px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.62);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.review-page .annotation-panel-header .sort-container:hover,
+.review-page .annotation-panel-header .sort-container:focus-within {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.review-page .annotation-panel-header .sort-select {
+  min-height: 30px;
+  padding: 4px 32px 4px 9px;
+  border: none;
+  border-radius: 6px;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  color: var(--color-text);
+  cursor: pointer;
+  outline: none;
+}
+
+.review-page .panel-resizer {
+  background-color: rgba(148, 163, 184, 0.28);
+  transition:
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.review-page .panel-resizer:hover,
+.review-page .panel-resizer.dragging {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3), 0 0 14px rgba(37, 99, 235, 0.28);
+}
+
+.review-page .panel-resizer:hover::after,
+.review-page .panel-resizer.dragging::after {
+  width: 3px;
+  background-color: #dbeafe;
+}
+
+html[data-theme="dark"] .review-page .annotation-panel-header .sort-container {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+html[data-theme="dark"] .review-page .annotation-panel-header .sort-container:hover,
+html[data-theme="dark"] .review-page .annotation-panel-header .sort-container:focus-within {
+  border-color: rgba(96, 165, 250, 0.8);
+  background: rgba(30, 41, 59, 0.96);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+html[data-theme="dark"] .review-page .annotation-panel-header .sort-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+html[data-theme="dark"] .review-page .panel-resizer {
+  background-color: rgba(71, 85, 105, 0.7);
+}
+
+html[data-theme="dark"] .review-page .panel-resizer:hover,
+html[data-theme="dark"] .review-page .panel-resizer.dragging {
+  background-color: #3b82f6;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.5), 0 0 18px rgba(59, 130, 246, 0.5);
+}
+
+/* Keep toolbar controls consistent with the visible Back and Import/Export hovers. */
+.review-page #btn-mark-completed:not(.completed):hover:not(:disabled),
+.review-page .btn-zoom:hover:not(:disabled),
+.review-page .btn-dual-page:not(.active):hover:not(:disabled),
+.review-page .btn-thumbnails:not(.active):hover:not(:disabled),
+.review-page .zoom-controls .zoom-select:hover,
+.review-page .zoom-controls .zoom-select:focus {
+  background-color: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.28);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+html[data-theme="dark"] .review-page #btn-mark-completed:not(.completed):hover:not(:disabled),
+html[data-theme="dark"] .review-page .btn-zoom:hover:not(:disabled),
+html[data-theme="dark"] .review-page .btn-dual-page:not(.active):hover:not(:disabled),
+html[data-theme="dark"] .review-page .btn-thumbnails:not(.active):hover:not(:disabled),
+html[data-theme="dark"] .review-page .zoom-controls .zoom-select:hover,
+html[data-theme="dark"] .review-page .zoom-controls .zoom-select:focus {
+  background-color: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #dbeafe;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }

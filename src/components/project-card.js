@@ -264,11 +264,11 @@ class ProjectCard extends HTMLElement {
         }
 
         .pc-paper-icon {
-          width: 18px;
-          height: 18px;
+          width: 32px;
+          height: 32px;
           color: #dc2626;
           flex-shrink: 0;
-          margin-top: 1px;
+          margin-top: 0;
         }
 
         .pc-paper-main {
@@ -380,6 +380,28 @@ class ProjectCard extends HTMLElement {
           align-items: center;
           gap: 4px;
           white-space: nowrap;
+        }
+
+        .pc-paper-due {
+          gap: 6px;
+          padding: 4px 8px;
+          border: 1px solid rgba(37, 99, 235, 0.24);
+          border-radius: 8px;
+          background: rgba(37, 99, 235, 0.08);
+          color: var(--color-primary, #2563eb);
+          font-weight: 700;
+        }
+
+        .pc-paper-due svg {
+          width: 14px;
+          height: 14px;
+          flex-shrink: 0;
+        }
+
+        :host-context(html[data-theme="dark"]) .pc-paper-due {
+          border-color: rgba(96, 165, 250, 0.3);
+          background: rgba(59, 130, 246, 0.16);
+          color: #93c5fd;
         }
 
         .pc-paper-meta-decision {
@@ -605,7 +627,7 @@ class ProjectCard extends HTMLElement {
             <span class="pc-paper-footer">
               <span class="pc-paper-footer-left">
                 <span class="pc-paper-updated">Updated ${this.escape(formatRelativeTime(paper.updated_at || new Date().toISOString()))}</span>
-                ${paper.review_deadline ? `<span class="pc-paper-due">${this.escape(dueLabel)}</span>` : ''}
+                ${paper.review_deadline ? `<span class="pc-paper-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${this.escape(dueLabel)}</span>` : ''}
               </span>
               <span class="pc-paper-footer-right">
                 <span class="pc-paper-status ${paper.completed === 1 ? 'completed' : 'reviewing'}">

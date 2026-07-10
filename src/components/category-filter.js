@@ -64,20 +64,31 @@ class CategoryFilter extends HTMLElement {
           display: inline-flex;
           align-items: center;
           gap: 4px;
+          min-height: 30px;
           padding: 4px 10px;
           background-color: var(--color-bg-tertiary, #252525);
           border: 1px solid var(--color-border, #333333);
           border-radius: var(--radius-full, 9999px);
           font-size: 0.75rem;
+          font-weight: 600;
           color: var(--color-text-secondary, #a3a3a3);
           cursor: pointer;
-          transition: all 150ms ease;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+          transition:
+            background-color 150ms ease,
+            border-color 150ms ease,
+            box-shadow 150ms ease,
+            color 150ms ease,
+            transform 150ms ease;
           user-select: none;
         }
 
         .filter-chip:hover {
           background-color: var(--color-bg-hover, #2a2a2a);
           border-color: var(--color-border-light, #404040);
+          color: var(--color-text, #e5e5e5);
+          box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+          transform: translateY(-1px);
         }
 
         .filter-chip:focus {
@@ -87,6 +98,13 @@ class CategoryFilter extends HTMLElement {
 
         .filter-chip.active {
           background-color: ${this.color}20;
+          border-color: ${this.color};
+          color: ${this.color};
+          box-shadow: 0 2px 8px ${this.color}30;
+        }
+
+        .filter-chip.active:hover {
+          background-color: ${this.color}30;
           border-color: ${this.color};
           color: ${this.color};
         }

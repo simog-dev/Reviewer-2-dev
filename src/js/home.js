@@ -32,8 +32,6 @@ const pdfGrid = document.getElementById('pdf-grid');
 const searchInput = document.getElementById('search-input');
 const dropZone = document.getElementById('drop-zone');
 const btnAddPdf = document.getElementById('btn-add-pdf');
-const btnAddPdfEmpty = document.getElementById('btn-add-pdf-empty');
-const btnSidebarNewProject = document.getElementById('btn-sidebar-new-project');
 const btnProjectFilters = document.getElementById('btn-project-filters');
 const btnSettings = document.getElementById('btn-settings');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
@@ -154,7 +152,9 @@ function filterAndRender() {
   updateSidebarState();
 
   if (filteredProjects.length === 0) {
-    if (searchQuery) {
+    if (allProjects.length === 0) {
+      renderProjects([]);
+    } else if (searchQuery) {
       showEmpty('No projects match your search', 'Try adjusting the search or filters, or create a new project.');
     } else if (dashboardFilter === 'completed') {
       showEmpty('No completed projects yet', 'Once a project is finished it will appear here.');
@@ -179,6 +179,8 @@ function renderProjects(projects) {
     card.project = project;
     pdfGrid.appendChild(card);
   });
+
+  if (allProjects.length > 0) return;
 
   const newProjectTile = document.createElement('button');
   newProjectTile.type = 'button';
@@ -980,8 +982,6 @@ function setupEventListeners() {
 
   // Add PDF buttons
   btnAddPdf.addEventListener('click', handleAddPDF);
-  btnAddPdfEmpty.addEventListener('click', handleAddPDF);
-  btnSidebarNewProject?.addEventListener('click', handleAddPDF);
   btnProjectFilters?.addEventListener('click', () => toggleFiltersMenu());
 
   // Search
