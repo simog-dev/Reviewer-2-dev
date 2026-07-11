@@ -3,7 +3,6 @@ import { formatDate, formatRelativeTime } from '../js/utils.js';
 class ProjectCard extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
     this._project = null;
     this._paperPage = 0;
     this._projectId = null;
@@ -19,7 +18,7 @@ class ProjectCard extends HTMLElement {
   }
 
   attributeChangedCallback() {
-    if (this.shadowRoot.innerHTML) {
+    if (this.innerHTML) {
       this.render();
       this.addEventListeners();
     }
@@ -60,520 +59,6 @@ class ProjectCard extends HTMLElement {
     const totalAnnotations = papers.reduce((total, paper) => total + (paper.annotation_count || 0), 0);
     const projectUpdatedLabel = formatRelativeTime(project.updated_at || new Date().toISOString());
 
-    const styles = `
-      <style>
-        :host {
-          display: block;
-          box-sizing: border-box;
-          height: 100%;
-        }
-
-        *,
-        *::before,
-        *::after {
-          box-sizing: inherit;
-        }
-
-        .pc-shell {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          min-height: 100%;
-          height: 100%;
-          padding: 18px;
-          border: 1px solid rgba(148, 163, 184, 0.26);
-          border-radius: 24px;
-          background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(249, 250, 252, 0.94) 100%);
-          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
-          transition:
-            transform 180ms ease,
-            box-shadow 180ms ease,
-            border-color 180ms ease;
-        }
-
-        .pc-shell:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
-          border-color: rgba(59, 130, 246, 0.24);
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-shell {
-          background:
-            linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.92) 100%);
-          border-color: rgba(71, 85, 105, 0.42);
-          box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-shell:hover {
-          border-color: rgba(96, 165, 250, 0.28);
-        }
-
-        .pc-header {
-          display: grid;
-          grid-template-columns: 40px minmax(0, 1fr) auto;
-          gap: 12px;
-          align-items: start;
-        }
-
-        .pc-project-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 14px;
-          background: rgba(59, 130, 246, 0.1);
-          color: var(--color-primary, #2563eb);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .pc-icon-btn svg,
-        .pc-paper-meta svg,
-        .pc-paper-footer svg,
-        .pc-paper-add-slot svg {
-          width: 16px;
-          height: 16px;
-        }
-
-        .pc-paper-icon svg {
-          width: 100%;
-          height: 100%;
-        }
-
-        .pc-project-name {
-          color: var(--color-text, #0f172a);
-          font-family: sans-serif;
-          font-size: 1rem;
-          font-weight: 700;
-          line-height: 1.25;
-          letter-spacing: -0.02em;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-        }
-
-        .pc-project-subtitle {
-          margin-top: 5px;
-          color: var(--color-text-secondary, #475569);
-          font-size: 0.84rem;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .pc-project-submeta {
-          margin-top: 4px;
-          color: var(--color-text-muted, #64748b);
-          font-size: 0.78rem;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .pc-project-status {
-          width: 24px;
-          height: 24px;
-          border-radius: 999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          background-color: ${completed ? '#16a34a' : 'rgba(148, 163, 184, 0.35)'};
-          border: 1px solid ${completed ? '#16a34a' : 'rgba(148, 163, 184, 0.24)'};
-          box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
-        }
-
-        .pc-project-status svg {
-          width: 14px;
-          height: 14px;
-        }
-
-        .pc-summary {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          color: var(--color-text-secondary, #475569);
-          font-size: 0.79rem;
-        }
-
-        .pc-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          border-radius: 999px;
-          padding: 4px 10px;
-          background: rgba(248, 250, 252, 0.94);
-          font-weight: 600;
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-pill {
-          background: rgba(15, 23, 42, 0.9);
-          border-color: rgba(71, 85, 105, 0.46);
-        }
-
-        .pc-decision {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 22px;
-          padding: 3px 8px;
-          border-radius: 999px;
-          border-color: transparent;
-          background-color: var(--decision-bg, #2563eb);
-          color: white;
-          font-size: 0.66rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          line-height: 1;
-          letter-spacing: 0.04em;
-        }
-
-        .pc-decision.accept { --decision-bg: #16a34a; }
-        .pc-decision.minor-revisions { --decision-bg: #d97706; }
-        .pc-decision.major-revisions { --decision-bg: #ea580c; }
-        .pc-decision.reject { --decision-bg: #dc2626; }
-
-        .pc-paper-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          min-height: 0;
-        }
-
-        .pc-paper {
-          border: 1px solid rgba(148, 163, 184, 0.26);
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 12px;
-          cursor: pointer;
-          transition:
-            border-color 150ms ease,
-            box-shadow 150ms ease,
-            transform 150ms ease;
-        }
-
-        .pc-paper:hover,
-        .pc-paper:focus {
-          border-color: rgba(59, 130, 246, 0.35);
-          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
-          transform: translateY(-1px);
-          outline: none;
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-paper {
-          background: rgba(15, 23, 42, 0.88);
-          border-color: rgba(71, 85, 105, 0.42);
-        }
-
-        .pc-paper-top {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-
-        .pc-paper-icon {
-          width: 32px;
-          height: 32px;
-          color: #dc2626;
-          flex-shrink: 0;
-          margin-top: 0;
-        }
-
-        .pc-paper-main {
-          min-width: 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .pc-paper-name-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          min-width: 0;
-        }
-
-        .pc-paper-name {
-          min-width: 0;
-          flex: 1;
-          color: var(--color-text, #0f172a);
-          font-size: 0.9rem;
-          font-weight: 600;
-          line-height: 1.35;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-        }
-
-        .pc-paper-actions {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-          opacity: 0;
-          margin-left: auto;
-          transition: opacity 150ms ease;
-        }
-
-        .pc-paper:hover .pc-paper-actions,
-        .pc-paper:focus-within .pc-paper-actions {
-          opacity: 1;
-        }
-
-        .pc-paper-action {
-          border: none;
-          background: transparent;
-          color: var(--color-text-muted, #64748b);
-          border-radius: 6px;
-          padding: 3px;
-          cursor: pointer;
-        }
-
-        .pc-paper-action:hover {
-          color: var(--color-text, #0f172a);
-          background-color: rgba(148, 163, 184, 0.12);
-        }
-
-        .pc-paper-delete:hover {
-          color: #dc2626;
-          background-color: rgba(220, 38, 38, 0.08);
-        }
-
-        .pc-paper-meta {
-          display: flex;
-          align-items: center;
-          width: 100%;
-          flex-wrap: wrap;
-          gap: 10px;
-          color: var(--color-text-muted, #64748b);
-          font-size: 0.78rem;
-        }
-
-        .pc-paper-meta span {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .pc-paper-footer {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 12px;
-          color: var(--color-text-secondary, #475569);
-          font-size: 0.78rem;
-        }
-
-        .pc-paper-footer-left {
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        .pc-paper-footer-right {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 6px;
-          flex-shrink: 0;
-        }
-
-        .pc-paper-updated,
-        .pc-paper-due {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          white-space: nowrap;
-        }
-
-        .pc-paper-due {
-          gap: 6px;
-          padding: 4px 8px;
-          border: 1px solid rgba(37, 99, 235, 0.24);
-          border-radius: 8px;
-          background: rgba(37, 99, 235, 0.08);
-          color: var(--color-primary, #2563eb);
-          font-weight: 700;
-        }
-
-        .pc-paper-due svg {
-          width: 14px;
-          height: 14px;
-          flex-shrink: 0;
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-paper-due {
-          border-color: rgba(96, 165, 250, 0.3);
-          background: rgba(59, 130, 246, 0.16);
-          color: #93c5fd;
-        }
-
-        .pc-paper-meta-decision {
-          margin-left: auto;
-        }
-
-        .pc-paper-status {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-weight: 600;
-        }
-
-        .pc-paper-status.completed {
-          color: #16a34a;
-        }
-
-        .pc-paper-status.reviewing {
-          color: var(--color-primary, #2563eb);
-        }
-
-        .pc-paper-add-slot {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 74px;
-          border: 1px dashed rgba(148, 163, 184, 0.38);
-          border-radius: 16px;
-          background: transparent;
-          color: var(--color-primary, #2563eb);
-          font-size: 0.9rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition:
-            background-color 150ms ease,
-            border-color 150ms ease,
-            transform 150ms ease;
-        }
-
-        .pc-paper-add-slot:hover {
-          border-color: rgba(59, 130, 246, 0.4);
-          background: rgba(59, 130, 246, 0.06);
-          transform: translateY(-1px);
-        }
-
-        .pc-pagination {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          min-height: 32px;
-          color: var(--color-text-muted, #64748b);
-          font-size: 0.78rem;
-          font-weight: 700;
-        }
-
-        .pc-pagination-count {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .pc-pagination-actions {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .pc-page-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 30px;
-          height: 30px;
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.86);
-          color: var(--color-text-secondary, #475569);
-          cursor: pointer;
-          transition:
-            border-color 150ms ease,
-            background-color 150ms ease,
-            color 150ms ease,
-            transform 150ms ease;
-        }
-
-        .pc-page-btn:hover:not(:disabled) {
-          border-color: rgba(59, 130, 246, 0.32);
-          background: rgba(59, 130, 246, 0.08);
-          color: var(--color-primary, #2563eb);
-          transform: translateY(-1px);
-        }
-
-        .pc-page-btn:disabled {
-          cursor: not-allowed;
-          opacity: 0.42;
-        }
-
-        .pc-page-btn svg {
-          width: 15px;
-          height: 15px;
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-page-btn {
-          background: rgba(15, 23, 42, 0.82);
-          border-color: rgba(71, 85, 105, 0.46);
-        }
-
-        .pc-card-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-top: auto;
-          padding-top: 2px;
-          flex-wrap: wrap;
-        }
-
-        .pc-action-btn {
-          border: 1px solid var(--button-tool-border, rgba(148, 163, 184, 0.28));
-          background: var(--button-tool-background, rgba(255, 255, 255, 0.88));
-          color: var(--color-text-secondary, #475569);
-          border-radius: 12px;
-          height: 38px;
-          padding: 0 14px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-size: 0.84rem;
-          font-weight: 600;
-          transition:
-            transform 150ms ease,
-            border-color 150ms ease,
-            background-color 150ms ease,
-            color 150ms ease,
-            box-shadow 150ms ease;
-        }
-
-        .pc-action-btn:hover {
-          transform: translateY(-1px);
-          color: var(--color-text, #0f172a);
-          border-color: var(--button-tool-hover-border, rgba(59, 130, 246, 0.28));
-          background: var(--button-tool-hover-background, rgba(255, 255, 255, 0.98));
-          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-action-btn {
-          color: var(--color-text-secondary, #94a3b8);
-        }
-
-        :host-context(html[data-theme="dark"]) .pc-action-btn:hover {
-          color: var(--color-text, #e2e8f0);
-          background: var(--button-tool-hover-background, rgba(15, 23, 42, 0.98));
-        }
-
-        .pc-link-btn {
-          margin-left: auto;
-        }
-      </style>
-    `;
 
     const pagination = pageCount > 1 ? `
       <div class="pc-pagination" aria-label="Paper pages">
@@ -603,8 +88,7 @@ class ProjectCard extends HTMLElement {
       </button>
     ` : '';
 
-    this.shadowRoot.innerHTML = `
-      ${styles}
+    this.innerHTML = `
       <article class="pc-shell">
         <div class="pc-header">
           <div class="pc-project-icon">
@@ -619,7 +103,7 @@ class ProjectCard extends HTMLElement {
             <div class="pc-project-subtitle">Updated ${this.escape(projectUpdatedLabel)}</div>
             ${project.conference ? `<div class="pc-project-submeta" title="${this.escape(project.conference)}">${this.escape(project.conference)}</div>` : ''}
           </div>
-          <div class="pc-project-status" title="${completed ? 'Project completed' : 'Project incomplete'}">
+          <div class="pc-project-status ${completed ? 'completed' : 'incomplete'}" title="${completed ? 'Project completed' : 'Project incomplete'}">
             ${completed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
           </div>
         </div>
@@ -636,14 +120,14 @@ class ProjectCard extends HTMLElement {
         ${pagination}
 
         <div class="pc-card-actions">
-          <button class="pc-action-btn edit-project-btn" title="Edit project">
+          <button class="btn btn--secondary pc-action-btn edit-project-btn" title="Edit project">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
             </svg>
             Edit
           </button>
-          <button class="pc-action-btn add-paper-btn" type="button">
+          <button class="btn btn--secondary pc-action-btn add-paper-btn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -651,7 +135,7 @@ class ProjectCard extends HTMLElement {
             Add a paper
           </button>
           ${project.submission_link ? `
-            <button class="pc-action-btn pc-link-btn" type="button">
+            <button class="btn btn--secondary pc-action-btn pc-link-btn" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                 <polyline points="15 3 21 3 21 9"/>
@@ -756,7 +240,7 @@ class ProjectCard extends HTMLElement {
   }
 
   addEventListeners() {
-    this.shadowRoot.querySelectorAll('.pc-paper').forEach(paperEl => {
+    this.querySelectorAll('.pc-paper').forEach(paperEl => {
       const open = () => {
         this.dispatchEvent(new CustomEvent('project-paper-open', {
           bubbles: true,
@@ -774,7 +258,7 @@ class ProjectCard extends HTMLElement {
       });
     });
 
-    this.shadowRoot.querySelectorAll('.pc-paper-delete').forEach(deleteBtn => {
+    this.querySelectorAll('.pc-paper-delete').forEach(deleteBtn => {
       deleteBtn.addEventListener('click', event => {
         event.stopPropagation();
         this.dispatchEvent(new CustomEvent('pdf-delete', {
@@ -788,7 +272,7 @@ class ProjectCard extends HTMLElement {
       });
     });
 
-    this.shadowRoot.querySelectorAll('.pc-paper-edit').forEach(editBtn => {
+    this.querySelectorAll('.pc-paper-edit').forEach(editBtn => {
       editBtn.addEventListener('click', event => {
         event.stopPropagation();
         this.dispatchEvent(new CustomEvent('paper-edit', {
@@ -799,7 +283,7 @@ class ProjectCard extends HTMLElement {
       });
     });
 
-    this.shadowRoot.querySelectorAll('.pc-paper-add-slot').forEach(addSlot => {
+    this.querySelectorAll('.pc-paper-add-slot').forEach(addSlot => {
       addSlot.addEventListener('click', event => {
         event.stopPropagation();
         this.dispatchEvent(new CustomEvent('project-paper-add', {
@@ -810,19 +294,19 @@ class ProjectCard extends HTMLElement {
       });
     });
 
-    const prevPageBtn = this.shadowRoot.querySelector('.pc-page-prev');
+    const prevPageBtn = this.querySelector('.pc-page-prev');
     prevPageBtn?.addEventListener('click', event => {
       event.stopPropagation();
       this.setPaperPage(this._paperPage - 1);
     });
 
-    const nextPageBtn = this.shadowRoot.querySelector('.pc-page-next');
+    const nextPageBtn = this.querySelector('.pc-page-next');
     nextPageBtn?.addEventListener('click', event => {
       event.stopPropagation();
       this.setPaperPage(this._paperPage + 1);
     });
 
-    const addPaperBtn = this.shadowRoot.querySelector('.add-paper-btn');
+    const addPaperBtn = this.querySelector('.add-paper-btn');
     addPaperBtn?.addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('project-paper-add', {
         bubbles: true,
@@ -831,7 +315,7 @@ class ProjectCard extends HTMLElement {
       }));
     });
 
-    const editProjectBtn = this.shadowRoot.querySelector('.edit-project-btn');
+    const editProjectBtn = this.querySelector('.edit-project-btn');
     editProjectBtn?.addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('project-edit', {
         bubbles: true,
@@ -840,7 +324,7 @@ class ProjectCard extends HTMLElement {
       }));
     });
 
-    const linkBtn = this.shadowRoot.querySelector('.pc-link-btn');
+    const linkBtn = this.querySelector('.pc-link-btn');
     linkBtn?.addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('project-platform-open', {
         bubbles: true,

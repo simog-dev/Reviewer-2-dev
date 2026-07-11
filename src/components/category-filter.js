@@ -3,7 +3,6 @@ import { getCategoryIcon } from '../js/utils.js';
 class CategoryFilter extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
   }
 
   static get observedAttributes() {
@@ -11,12 +10,12 @@ class CategoryFilter extends HTMLElement {
   }
 
   connectedCallback() {
-    this.addEventListeners();  // Add listeners first (to shadowRoot)
+    this.addEventListeners();
     this.render();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (oldValue !== newValue && this.shadowRoot.innerHTML) {
+    if (oldValue !== newValue && this.innerHTML) {
       this.render();
     }
   }
@@ -54,95 +53,23 @@ class CategoryFilter extends HTMLElement {
   }
 
   render() {
-    const styles = `
-      <style>
-        :host {
-          display: inline-block;
-        }
-
-        .filter-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          min-height: 30px;
-          padding: 4px 10px;
-          background-color: var(--color-bg-tertiary, #252525);
-          border: 1px solid var(--color-border, #333333);
-          border-radius: var(--radius-full, 9999px);
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: var(--color-text-secondary, #a3a3a3);
-          cursor: pointer;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
-          transition:
-            background-color 150ms ease,
-            border-color 150ms ease,
-            box-shadow 150ms ease,
-            color 150ms ease,
-            transform 150ms ease;
-          user-select: none;
-        }
-
-        .filter-chip:hover {
-          background-color: var(--color-bg-hover, #2a2a2a);
-          border-color: var(--color-border-light, #404040);
-          color: var(--color-text, #e5e5e5);
-          box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
-          transform: translateY(-1px);
-        }
-
-        .filter-chip:focus {
-          outline: 2px solid var(--color-primary, #3b82f6);
-          outline-offset: 2px;
-        }
-
-        .filter-chip.active {
-          background-color: ${this.color}20;
-          border-color: ${this.color};
-          color: ${this.color};
-          box-shadow: 0 2px 8px ${this.color}30;
-        }
-
-        .filter-chip.active:hover {
-          background-color: ${this.color}30;
-          border-color: ${this.color};
-          color: ${this.color};
-        }
-
-        .filter-chip svg {
-          width: 12px;
-          height: 12px;
-        }
-
-        .count {
-          background-color: ${this.active ? this.color + '40' : 'var(--color-bg-secondary, #1a1a1a)'};
-          padding: 1px 5px;
-          border-radius: var(--radius-full, 9999px);
-          font-size: 0.6875rem;
-          min-width: 16px;
-          text-align: center;
-        }
-      </style>
-    `;
-
-    this.shadowRoot.innerHTML = `
-      ${styles}
-      <button class="filter-chip ${this.active ? 'active' : ''}"
+    this.innerHTML = `
+      <button class="category-filter-chip ${this.active ? 'active' : ''}"
+              style="--category-filter-color: ${this.color};"
               tabindex="0"
               role="checkbox"
               aria-checked="${this.active}"
               aria-label="Filter by ${this.name}">
         ${getCategoryIcon(this.icon)}
         <span class="name">${this.name}</span>
-        <span class="count">${this.count}</span>
+        <span class="category-filter-count">${this.count}</span>
       </button>
     `;
   }
 
   addEventListeners() {
-    // Use event delegation on shadowRoot (survives re-renders)
-    this.shadowRoot.addEventListener('click', (e) => {
-      if (e.target.closest('.filter-chip')) {
+    this.addEventListener('click', (e) => {
+      if (e.target.closest('.category-filter-chip')) {
         // Don't toggle internally - let parent control the state
         // Just dispatch the event with current state
         this.dispatchEvent(new CustomEvent('filter-change', {
@@ -156,10 +83,10 @@ class CategoryFilter extends HTMLElement {
       }
     });
 
-    this.shadowRoot.addEventListener('keydown', (e) => {
-      if (e.target.closest('.filter-chip') && (e.key === 'Enter' || e.key === ' ')) {
+    this.addEventListener('keydown', (e) => {
+      if (e.target.closest('.category-filter-chip') && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
-        e.target.closest('.filter-chip').click();
+        e.target.closest('.category-filter-chip').click();
       }
     });
   }
