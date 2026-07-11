@@ -60,7 +60,7 @@ html[data-theme="dark"] .home-sidebar {
 
 .sidebar-brand-name {
   display: block;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -208,7 +208,7 @@ html[data-theme="dark"] .home-sidebar {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding: 26px 28px 24px;
+  padding: 26px 15px 0px;
   overflow: hidden;
 }
 
@@ -236,7 +236,7 @@ html[data-theme="dark"] .home-sidebar {
 }
 
 .dashboard-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: clamp(2rem, 2.4vw, 2.8rem);
   line-height: 1.05;
   letter-spacing: -0.045em;
@@ -359,7 +359,7 @@ html[data-theme="dark"] .search-shell {
 
 .search-shell-icon svg,
 .search-shell-action svg,
-.toolbar-button svg {
+.btn--toolbar svg {
   width: 18px;
   height: 18px;
 }
@@ -398,57 +398,18 @@ html[data-theme="dark"] .search-shell {
   margin-left: auto;
 }
 
-.toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.toolbar-button,
+.btn--toolbar {
   gap: 10px;
-  min-height: 42px;
+  min-height: var(--control-height-md);
   padding: 0 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.84);
-  color: var(--color-text);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
   font-size: 0.93rem;
   font-weight: 600;
-  cursor: pointer;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    background-color var(--transition-fast),
-    border-color var(--transition-fast);
 }
 
-.toolbar-button:hover {
+.toolbar-button:hover,
+.btn--toolbar:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
-}
-
-.toolbar-button--secondary:hover {
-  border-color: rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.96);
-}
-
-.toolbar-button--primary {
-  border-color: rgba(37, 99, 235, 0.12);
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: white;
-  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.2);
-}
-
-.toolbar-button--primary:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-}
-
-html[data-theme="dark"] .toolbar-button {
-  background: rgba(15, 23, 42, 0.82);
-  border-color: rgba(148, 163, 184, 0.18);
-  color: var(--color-text);
-}
-
-html[data-theme="dark"] .toolbar-button--secondary:hover {
-  background: rgba(15, 23, 42, 0.96);
 }
 
 .filters-popover {
@@ -460,36 +421,8 @@ html[data-theme="dark"] .toolbar-button--secondary:hover {
 }
 
 .filter-btn {
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 999px;
-  padding: 9px 16px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--color-text-secondary);
   font-size: 0.88rem;
   font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast),
-    border-color var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.filter-btn:hover {
-  transform: translateY(-1px);
-  color: var(--color-text);
-  border-color: rgba(59, 130, 246, 0.32);
-}
-
-.filter-btn.active {
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--color-primary);
-  border-color: rgba(37, 99, 235, 0.24);
-}
-
-html[data-theme="dark"] .filter-btn {
-  background: rgba(15, 23, 42, 0.72);
-  border-color: rgba(148, 163, 184, 0.18);
 }
 
 /* Board */
@@ -546,7 +479,6 @@ project-card {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 100%;
   min-height: 390px;
   padding: 32px;
   appearance: none;
@@ -582,7 +514,7 @@ html[data-theme="dark"] .project-grid-tile {
 
 .project-grid-tile__title {
   margin-bottom: 12px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -651,7 +583,7 @@ html[data-theme="dark"] .empty-state-card {
 }
 
 .empty-state-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -800,37 +732,11 @@ html[data-theme="dark"] .home-page .modal-home {
 }
 
 .home-page .modal-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--color-text);
-}
-
-.home-page .modal-close {
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--color-text-secondary);
-  transition:
-    transform var(--transition-fast),
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.home-page .modal-close:hover {
-  transform: translateY(-1px);
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.22);
-  color: var(--color-primary);
-}
-
-html[data-theme="dark"] .home-page .modal-close {
-  background: rgba(15, 23, 42, 0.82);
-  border-color: rgba(71, 85, 105, 0.42);
 }
 
 .home-page .modal-body {
@@ -1317,7 +1223,7 @@ html[data-theme="dark"] .home-page .modal-check {
   font-weight: 600;
 }
 
-.home-page .modal-footer .btn-secondary {
+.home-page .modal-footer .btn--secondary {
   border-color: rgba(148, 163, 184, 0.24);
   background: rgba(255, 255, 255, 0.78);
 }
@@ -1331,7 +1237,7 @@ html[data-theme="dark"] .home-page .modal-check {
   height: 42px;
 }
 
-html[data-theme="dark"] .home-page .modal-footer .btn-secondary {
+html[data-theme="dark"] .home-page .modal-footer .btn--secondary {
   background: rgba(15, 23, 42, 0.78);
 }
 
@@ -1405,7 +1311,7 @@ html[data-theme="dark"] .home-page .modal-footer .btn-secondary {
     margin-left: 0;
   }
 
-  .toolbar-button {
+  .btn--toolbar {
     flex: 1;
   }
 
@@ -1462,5 +1368,108 @@ html[data-theme="dark"] .home-page .modal-footer .btn-secondary {
 
   .home-page .modal-footer .btn {
     flex: 1 1 100%;
+  }
+}
+
+/* Keep the dashboard desktop-like on narrow windows. The page scrolls
+   horizontally once the sidebar and one readable project card no longer fit. */
+@media (max-width: 960px) {
+  body.home-page {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .home-shell {
+    grid-template-columns: 220px minmax(480px, 1fr);
+    min-width: 700px;
+  }
+
+  .home-sidebar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    overflow: visible;
+    padding: 18px 14px 16px;
+    border-right: 1px solid rgba(148, 163, 184, 0.28);
+    border-bottom: none;
+  }
+
+  .sidebar-nav,
+  .sidebar-section {
+    min-width: 0;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    align-self: auto;
+  }
+
+  .home-main {
+    min-width: 0;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-shell {
+    grid-template-columns: 190px minmax(480px, 1fr);
+    min-width: 670px;
+  }
+
+  .home-sidebar {
+    gap: 14px;
+    padding: 14px 10px;
+  }
+
+  .sidebar-brand {
+    gap: 10px;
+    padding-inline: 4px;
+  }
+
+  .sidebar-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-brand-name {
+    font-size: 1.3rem;
+  }
+
+  .sidebar-nav-item,
+  .sidebar-settings {
+    min-height: 44px;
+    padding: 9px 10px;
+    gap: 9px;
+  }
+
+  .dashboard-hero {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dashboard-toolbar {
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .toolbar-actions {
+    width: auto;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .btn--toolbar {
+    flex: 0 0 auto;
+    padding-inline: 12px;
+    font-size: 0.86rem;
+  }
+
+  .search-shell {
+    min-width: 0;
+  }
+
+  .pdf-grid {
+    grid-template-columns: minmax(360px, 1fr);
   }
 }

@@ -7,23 +7,22 @@
   <title>Reviewer 2 - Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/settings.css">
 </head>
 <body class="settings-page">
   <div class="settings-container">
     <header class="settings-header">
-      <button class="btn btn-ghost btn-back" id="btn-back" title="Back to Home">
+      <button class="btn btn--ghost btn-back" id="btn-back" title="Back to Home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
         Back
       </button>
       <div class="settings-header-copy">
-        <span class="settings-kicker">Workspace</span>
-        <span class="settings-title">Settings</span>
-        <p class="settings-subtitle">Configure your review workflow, AI generation, and annotation categories.</p>
+        <h1 class="settings-title">Settings</h1>
+        <p class="settings-subtitle">Configure your annotation categories and AI review generation.</p>
       </div>
     </header>
 
@@ -39,7 +38,7 @@
           </div>
           <div class="category-limits-hint" id="category-limits-hint"></div>
           <div class="category-list" id="category-list"></div>
-          <button class="btn btn-secondary btn-add-category" id="btn-add-category">
+          <button class="btn btn--secondary btn--block btn-add-category" id="btn-add-category">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
@@ -103,10 +102,10 @@
             <textarea class="textarea prompt-textarea" id="prompt-input" placeholder="Enter your custom system prompt..."></textarea>
             <span class="form-hint">Instructions for the AI when generating the review.</span>
           </div>
-        </div>
 
-        <div class="settings-actions">
-          <button class="btn btn-primary btn-save-settings" id="btn-save">Save Settings</button>
+          <div class="settings-actions">
+            <button class="btn btn--primary btn-save-settings" id="btn-save">Save</button>
+          </div>
         </div>
       </div>
     </div>
@@ -122,7 +121,7 @@
           <span class="modal-kicker">Confirmation</span>
           <h3 class="modal-title">Rename Category</h3>
         </div>
-        <button class="modal-close" id="rename-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="rename-modal-close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -133,8 +132,8 @@
         <p class="modal-message" id="rename-modal-message"></p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="rename-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="rename-modal-confirm">Rename</button>
+        <button class="btn btn--secondary" id="rename-modal-cancel">Cancel</button>
+        <button class="btn btn--primary" id="rename-modal-confirm">Rename</button>
       </div>
     </div>
   </div>

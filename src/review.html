@@ -7,7 +7,7 @@
   <title>Reviewer 2 - Review</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/review.css">
 </head>
@@ -16,7 +16,7 @@
     <!-- Toolbar -->
     <header class="toolbar">
       <div class="toolbar-left">
-        <button class="btn btn-ghost btn-back" id="btn-back" title="Back to Home">
+        <button class="btn btn--ghost btn-back" id="btn-back" title="Back to Home">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
@@ -28,7 +28,7 @@
       <div class="toolbar-center">
         <!-- Zoom Controls -->
         <div class="zoom-controls">
-          <button class="btn btn-ghost btn-icon btn-zoom" id="btn-zoom-out" title="Zoom Out (Ctrl+-)">
+          <button class="btn btn--tool btn--icon btn-zoom" id="btn-zoom-out" title="Zoom Out (Ctrl+-)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -44,7 +44,7 @@
             <option value="2">200%</option>
             <option value="fit-width">Fit Width</option>
           </select>
-          <button class="btn btn-ghost btn-icon btn-zoom" id="btn-zoom-in" title="Zoom In (Ctrl++)">
+          <button class="btn btn--tool btn--icon btn-zoom" id="btn-zoom-in" title="Zoom In (Ctrl++)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Dual Page Toggle -->
-        <button class="btn btn-secondary btn-dual-page" id="btn-dual-page" title="Dual Page View (D)">
+        <button class="btn btn--tool btn-dual-page" id="btn-dual-page" title="Dual Page View (D)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="3" width="8" height="18" rx="1"/>
             <rect x="14" y="3" width="8" height="18" rx="1"/>
@@ -70,7 +70,7 @@
         </button>
 
         <!-- Thumbnail Sidebar Toggle -->
-        <button class="btn btn-secondary btn-thumbnails" id="btn-thumbnails" title="Page Thumbnails (T)" aria-pressed="false">
+        <button class="btn btn--tool btn-thumbnails" id="btn-thumbnails" title="Page Thumbnails (T)" aria-pressed="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="4" y="3" width="6" height="8" rx="1"/>
             <rect x="14" y="3" width="6" height="8" rx="1"/>
@@ -80,7 +80,7 @@
         </button>
 
         <!-- Highlight Mode Toggle -->
-        <button class="btn btn-secondary btn-highlight" id="btn-highlight" title="Highlight Mode (H)">
+        <button class="btn btn--tool btn-highlight" id="btn-highlight" title="Highlight Mode (H)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 20h9"/>
             <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
@@ -96,7 +96,7 @@
         </button>
 
         <!-- Mark Completed Button -->
-        <button class="btn btn-secondary" id="btn-mark-completed" title="Mark as Completed">
+        <button class="btn btn--secondary" id="btn-mark-completed" title="Mark as Completed">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
@@ -181,7 +181,7 @@
 
           <!-- Add Note Button -->
           <div class="add-note-section">
-            <button class="btn btn-ghost btn-add-note" id="btn-add-free-note"
+            <button class="btn btn--secondary btn--block btn-add-note" id="btn-add-free-note"
                     title="Add a note without highlighting text (N)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
@@ -198,13 +198,13 @@
               </svg>
               <div class="annotation-list-empty-title">No annotations yet</div>
               <div class="annotation-list-empty-text">
-                Enable highlight mode and select text in the PDF to create annotations.
+                Select text in the PDF to create new annotations or add free "Notes".
               </div>
             </div>
           </div>
 
           <div class="annotation-panel-footer">
-            <button class="btn btn-secondary btn-import" id="btn-import" title="Import Annotations">
+            <button class="btn btn--secondary btn--block btn-import" id="btn-import" title="Import Annotations">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -214,7 +214,7 @@
             </button>
 
             <div class="annotation-export-container">
-              <button class="btn btn-secondary btn-export" id="btn-export" title="Export Annotations">
+              <button class="btn btn--secondary btn--block btn-export" id="btn-export" title="Export Annotations">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/>
@@ -258,17 +258,17 @@
         </button>
         <div class="search-panel-content">
           <div class="search-panel-header">
-            <button class="btn btn-ghost btn-icon" id="btn-webview-back" title="Back">
+            <button class="btn btn--tool btn--icon" id="btn-webview-back" title="Back">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
-            <button class="btn btn-ghost btn-icon" id="btn-webview-forward" title="Forward">
+            <button class="btn btn--tool btn--icon" id="btn-webview-forward" title="Forward">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
-            <button class="btn btn-ghost btn-icon" id="btn-webview-reload" title="Reload">
+            <button class="btn btn--tool btn--icon" id="btn-webview-reload" title="Reload">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="23 4 23 10 17 10"/>
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -297,7 +297,7 @@
               <h2 class="review-panel-title">Review</h2>
             </div>
             <div class="review-panel-status">
-              <button class="btn btn-ghost btn-icon review-history-btn" id="review-undo-btn" title="Undo">
+              <button class="btn btn--tool btn--icon review-history-btn" id="review-undo-btn" title="Undo">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -314,7 +314,7 @@
                     stroke-linejoin="miter"/>
                 </svg>
               </button>
-              <button class="btn btn-ghost btn-icon review-history-btn" id="review-redo-btn" title="Redo">
+              <button class="btn btn--tool btn--icon review-history-btn" id="review-redo-btn" title="Redo">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -336,20 +336,20 @@
           </div>
 
           <div class="review-editor-toolbar" id="review-editor-toolbar">
-            <button class="review-tool-btn" type="button" data-command="bold" title="Bold">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="bold" title="Bold">
               <strong>B</strong>
             </button>
-            <button class="review-tool-btn" type="button" data-command="italic" title="Italic">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="italic" title="Italic">
               <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
                 <path d="M7.5 4H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                 <path d="M4 14H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                 <path d="M11 4L7 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
               </svg>
             </button>
-            <button class="review-tool-btn" type="button" data-command="underline" title="Underline">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="underline" title="Underline">
               <span style="text-decoration: underline;">U</span>
             </button>
-            <button class="review-tool-btn" type="button" data-command="insertUnorderedList" title="Bullet List">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="insertUnorderedList" title="Bullet List">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="9" y1="6" x2="20" y2="6"/>
                 <line x1="9" y1="12" x2="20" y2="12"/>
@@ -359,7 +359,7 @@
                 <circle cx="4" cy="18" r="1"/>
               </svg>
             </button>
-            <button class="review-tool-btn" type="button" data-command="insertOrderedList" title="Numbered List">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="insertOrderedList" title="Numbered List">
               <svg viewBox="0 0 24 30" fill="none"
                 stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round"
@@ -391,21 +391,21 @@
                     stroke="none">3</text>
             </svg>
             </button>
-            <button class="review-tool-btn" type="button" data-command="justifyLeft" title="Align Left">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="justifyLeft" title="Align Left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="4" y1="6" x2="20" y2="6"/>
                 <line x1="4" y1="12" x2="14" y2="12"/>
                 <line x1="4" y1="18" x2="20" y2="18"/>
               </svg>
             </button>
-            <button class="review-tool-btn" type="button" data-command="justifyCenter" title="Align Center">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="justifyCenter" title="Align Center">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="6" y1="6" x2="18" y2="6"/>
                 <line x1="4" y1="12" x2="20" y2="12"/>
                 <line x1="6" y1="18" x2="18" y2="18"/>
               </svg>
             </button>
-            <button class="review-tool-btn" type="button" data-command="justifyRight" title="Align Right">
+            <button class="btn btn--tool review-tool-btn" type="button" data-command="justifyRight" title="Align Right">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="4" y1="6" x2="20" y2="6"/>
                 <line x1="10" y1="12" x2="20" y2="12"/>
@@ -420,7 +420,7 @@
 
           <div class="review-panel-footer">
             <div class="review-export-container">
-              <button class="btn btn-secondary btn-review-export" id="btn-review-export" title="Export Review">
+              <button class="btn btn--secondary btn--block btn-review-export" id="btn-review-export" title="Export Review">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/>
@@ -448,7 +448,7 @@
               </div>
             </div>
 
-            <button class="btn btn-primary btn-generate-review" id="btn-generate-review" disabled>
+            <button class="btn btn--primary btn--block btn-generate-review" id="btn-generate-review" disabled>
               <span class="generate-review-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -533,7 +533,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title" id="modal-title">Add Annotation</h3>
-        <button class="modal-close" id="modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -562,8 +562,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="modal-save">Save</button>
+        <button class="btn btn--secondary" id="modal-cancel">Cancel</button>
+        <button class="btn btn--primary" id="modal-save">Save</button>
       </div>
     </div>
   </div>
@@ -573,7 +573,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title" id="completion-modal-title">Mark as Completed</h3>
-        <button class="modal-close" id="completion-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="completion-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -592,8 +592,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="completion-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="completion-modal-confirm">Confirm</button>
+        <button class="btn btn--secondary" id="completion-modal-cancel">Cancel</button>
+        <button class="btn btn--primary" id="completion-modal-confirm">Confirm</button>
       </div>
     </div>
   </div>
@@ -603,7 +603,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title">PDF File Not Found</h3>
-        <button class="modal-close" id="pdf-not-found-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="pdf-not-found-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -616,8 +616,8 @@
         <p style="margin-top: 12px;">The file may have been moved, renamed, or deleted.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="pdf-not-found-back">Go Back</button>
-        <button class="btn btn-primary" id="pdf-not-found-reload">Select New File</button>
+        <button class="btn btn--secondary" id="pdf-not-found-back">Go Back</button>
+        <button class="btn btn--primary" id="pdf-not-found-reload">Select New File</button>
       </div>
     </div>
   </div>
@@ -627,7 +627,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title">Import Annotations</h3>
-        <button class="modal-close" id="import-compatibility-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="import-compatibility-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -638,8 +638,8 @@
         <p id="import-compatibility-message"></p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="import-compatibility-cancel">Cancel</button>
-        <button class="btn btn-primary" id="import-compatibility-confirm">Import Anyway</button>
+        <button class="btn btn--secondary" id="import-compatibility-cancel">Cancel</button>
+        <button class="btn btn--primary" id="import-compatibility-confirm">Import Anyway</button>
       </div>
     </div>
   </div>
@@ -649,7 +649,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title">Delete Annotation</h3>
-        <button class="modal-close" id="delete-annotation-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="delete-annotation-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -660,8 +660,8 @@
         <p>Are you sure you want to delete this annotation? This action cannot be undone.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="delete-annotation-modal-cancel">Cancel</button>
-        <button class="btn btn-danger" id="delete-annotation-modal-confirm">Delete</button>
+        <button class="btn btn--secondary" id="delete-annotation-modal-cancel">Cancel</button>
+        <button class="btn btn--danger" id="delete-annotation-modal-confirm">Delete</button>
       </div>
     </div>
   </div>

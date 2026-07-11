@@ -595,6 +595,7 @@
   justify-content: center;
   gap: 6px;
   font-size: 0.875rem;
+  border: 1px solid var(--color-border);
 }
 
 .btn-add-note svg {
@@ -772,25 +773,10 @@
 }
 
 .review-tool-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   min-width: 34px;
   height: 34px;
   padding: 0 10px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.review-tool-btn:hover,
-.review-tool-btn.active {
-  background-color: var(--color-primary-light);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
 }
 
 .review-tool-btn svg {
@@ -1067,10 +1053,10 @@
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--control-radius);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: white;
+  color: var(--color-primary-contrast);
   position: relative;
 }
 
@@ -1325,17 +1311,17 @@
   flex-shrink: 0;
 }
 
-.search-panel-header .btn-icon {
+.search-panel-header .btn--icon {
   padding: var(--spacing-xs);
   flex-shrink: 0;
 }
 
-.search-panel-header .btn-icon svg {
+.search-panel-header .btn--icon svg {
   width: 16px;
   height: 16px;
 }
 
-.search-panel-header .btn-icon:disabled {
+.search-panel-header .btn--icon:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -1383,7 +1369,9 @@
 }
 
 .btn-generate-review:disabled {
-  opacity: 0.4;
+  opacity: 0.65;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   cursor: not-allowed;
 }
 
@@ -1723,6 +1711,32 @@
 }
 
 /* Review UI Refresh */
+.review-page {
+  /* Shared Review surfaces. Page-specific states should override these tokens,
+     not repeat the same color, border and shadow declarations. */
+  --review-control-background: rgba(255, 255, 255, 0.8);
+  --review-control-border: rgba(148, 163, 184, 0.24);
+  --review-control-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  --review-panel-background: rgba(255, 255, 255, 0.38);
+  --review-header-background: rgba(255, 255, 255, 0.44);
+  --review-footer-background: rgba(255, 255, 255, 0.28);
+  --review-popup-border: rgba(148, 163, 184, 0.2);
+  --review-popup-background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%);
+  --review-popup-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="dark"] .review-page {
+  --review-control-background: rgba(15, 23, 42, 0.78);
+  --review-control-border: rgba(71, 85, 105, 0.42);
+  --review-control-shadow: 0 10px 24px rgba(2, 6, 23, 0.28);
+  --review-panel-background: rgba(15, 23, 42, 0.36);
+  --review-header-background: rgba(15, 23, 42, 0.44);
+  --review-footer-background: rgba(15, 23, 42, 0.28);
+  --review-popup-border: rgba(71, 85, 105, 0.42);
+  --review-popup-background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.94) 100%);
+  --review-popup-shadow: 0 20px 40px rgba(2, 6, 23, 0.36);
+}
+
 body.review-page {
   background:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.14) 0%, transparent 24%),
@@ -1757,46 +1771,41 @@ html[data-theme="dark"] body.review-page {
   gap: 10px;
 }
 
-.review-page .btn-back,
 .review-page .zoom-controls,
 .review-page .page-indicator,
 .review-page .btn-dual-page,
 .review-page .btn-thumbnails,
 .review-page #btn-mark-completed,
-.review-page .search-panel-header .btn-icon {
+.review-page .search-panel-header .btn--icon {
   border-radius: 14px;
 }
 
-.review-page .btn-back,
 .review-page .zoom-controls,
 .review-page .page-indicator,
-.review-page .toolbar .btn-secondary,
-.review-page .toolbar .btn-ghost.btn-icon,
-.review-page .search-panel-header .btn-icon,
+.review-page .toolbar .btn--tool,
+.review-page .search-panel-header .btn--icon,
 .review-page .pdf-search-bar,
 .review-page .review-tool-btn,
-.review-page .annotation-panel-footer .btn,
-.review-page .review-panel-footer .btn,
+.review-page .annotation-panel-footer .btn--secondary,
+.review-page .review-panel-footer .btn--secondary,
 .review-page .webview-url-bar {
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  border: 1px solid var(--review-control-border);
+  background: var(--review-control-background);
+  box-shadow: var(--review-control-shadow);
 }
 
-html[data-theme="dark"] .review-page .btn-back,
 html[data-theme="dark"] .review-page .zoom-controls,
 html[data-theme="dark"] .review-page .page-indicator,
-html[data-theme="dark"] .review-page .toolbar .btn-secondary,
-html[data-theme="dark"] .review-page .toolbar .btn-ghost.btn-icon,
-html[data-theme="dark"] .review-page .search-panel-header .btn-icon,
+html[data-theme="dark"] .review-page .toolbar .btn--tool,
+html[data-theme="dark"] .review-page .search-panel-header .btn--icon,
 html[data-theme="dark"] .review-page .pdf-search-bar,
 html[data-theme="dark"] .review-page .review-tool-btn,
-html[data-theme="dark"] .review-page .annotation-panel-footer .btn,
-html[data-theme="dark"] .review-page .review-panel-footer .btn,
+html[data-theme="dark"] .review-page .annotation-panel-footer .btn--secondary,
+html[data-theme="dark"] .review-page .review-panel-footer .btn--secondary,
 html[data-theme="dark"] .review-page .webview-url-bar {
-  background: rgba(15, 23, 42, 0.78);
-  border-color: rgba(71, 85, 105, 0.42);
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.28);
+  background: var(--review-control-background);
+  border-color: var(--review-control-border);
+  box-shadow: var(--review-control-shadow);
 }
 
 .review-page .btn-back {
@@ -1804,22 +1813,10 @@ html[data-theme="dark"] .review-page .webview-url-bar {
   padding-inline: 16px;
 }
 
-.review-page .btn-back:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.28);
-  color: var(--color-primary);
-}
-
-html[data-theme="dark"] .review-page .btn-back:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.18);
-  border-color: rgba(59, 130, 246, 0.34);
-  color: #dbeafe;
-}
-
 .review-page .pdf-title {
   max-width: 360px;
   color: var(--color-text);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -1846,28 +1843,6 @@ html[data-theme="dark"] .review-page .btn-back:hover:not(:disabled) {
 
 .btn-zoom{
   border-radius: 10px;
-}
-
-.review-page .btn-zoom {
-  background: transparent;
-  color: var(--color-text-secondary);
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.review-page .btn-zoom:hover:not(:disabled) {
-  color: var(--color-text);
-}
-
-html[data-theme="dark"] .review-page .btn-zoom {
-  background: transparent;
-  color: rgba(226, 232, 240, 0.86);
-}
-
-html[data-theme="dark"] .review-page .btn-zoom:hover:not(:disabled) {
-  color: #ffffff;
 }
 
 .review-page .btn-dual-page.active,
@@ -2040,16 +2015,8 @@ html[data-theme="dark"] .review-page .panel-left-tab {
 .review-page .search-panel-content,
 .review-page .review-panel-content,
 .review-page .pdf-thumbnail-sidebar {
-  background: rgba(255, 255, 255, 0.38);
+  background: var(--review-panel-background);
   border-radius: 0;
-}
-
-html[data-theme="dark"] .review-page .pdf-viewer-container,
-html[data-theme="dark"] .review-page .annotation-panel-content,
-html[data-theme="dark"] .review-page .search-panel-content,
-html[data-theme="dark"] .review-page .review-panel-content,
-html[data-theme="dark"] .review-page .pdf-thumbnail-sidebar {
-  background: rgba(15, 23, 42, 0.36);
 }
 
 .review-page .annotation-panel-header,
@@ -2068,14 +2035,8 @@ html[data-theme="dark"] .review-page .pdf-thumbnail-sidebar {
 .review-page .review-panel-header,
 .review-page .search-panel-header {
   padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.44);
+  background: var(--review-header-background);
   backdrop-filter: blur(10px);
-}
-
-html[data-theme="dark"] .review-page .annotation-panel-header,
-html[data-theme="dark"] .review-page .review-panel-header,
-html[data-theme="dark"] .review-page .search-panel-header {
-  background: rgba(15, 23, 42, 0.44);
 }
 
 .review-page .annotation-panel-title,
@@ -2084,7 +2045,7 @@ html[data-theme="dark"] .review-page .search-panel-header {
 .review-page .resizer-label,
 .review-page .collapsed-indicator {
   color: var(--color-text);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -2107,14 +2068,7 @@ html[data-theme="dark"] .review-page .search-panel-header {
 .review-page .add-note-section,
 .review-page .annotation-panel-footer,
 .review-page .review-panel-footer {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-html[data-theme="dark"] .review-page .category-filters,
-html[data-theme="dark"] .review-page .add-note-section,
-html[data-theme="dark"] .review-page .annotation-panel-footer,
-html[data-theme="dark"] .review-page .review-panel-footer {
-  background: rgba(15, 23, 42, 0.28);
+  background: var(--review-footer-background);
 }
 
 .review-page .annotation-panel-footer,
@@ -2238,23 +2192,11 @@ html[data-theme="dark"] .review-page .review-editor {
 .review-page .selection-popup,
 .review-page .highlight-popup,
 .review-page .citation-popup {
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--review-popup-border);
   border-radius: 18px;
   z-index: 80;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
-}
-
-html[data-theme="dark"] .review-page .export-menu,
-html[data-theme="dark"] .review-page .context-menu,
-html[data-theme="dark"] .review-page .selection-popup,
-html[data-theme="dark"] .review-page .highlight-popup,
-html[data-theme="dark"] .review-page .citation-popup {
-  border-color: rgba(71, 85, 105, 0.42);
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.94) 100%);
-  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.36);
+  background: var(--review-popup-background);
+  box-shadow: var(--review-popup-shadow);
 }
 
 .review-page .popup-action-btn,
@@ -2282,18 +2224,14 @@ html[data-theme="dark"] .review-page .btn-review-export:hover:not(:disabled) {
 .review-page .review-panel-footer .btn-generate-review {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-primary-contrast);
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
 }
 
 .review-page .review-panel-footer .btn-generate-review:hover:not(:disabled) {
   background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
-  color: #ffffff;
-}
-
-html[data-theme="dark"] .review-page .review-panel-footer .btn-generate-review {
-  color: #ffffff;
+  color: var(--color-primary-contrast);
 }
 
 .review-page .webview-url-bar,
@@ -2343,7 +2281,7 @@ html[data-theme="dark"] .review-page .modal {
 }
 
 .review-page .modal-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: sans-serif;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -2359,28 +2297,20 @@ html[data-theme="dark"] .review-page .selected-text-preview {
   border-color: rgba(71, 85, 105, 0.42);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 720px) {
   .review-page .toolbar {
-    flex-wrap: wrap;
-    justify-content: center;
+    padding: 14px;
+    gap: 8px;
   }
 
   .review-page .toolbar-left,
   .review-page .toolbar-center,
   .review-page .toolbar-right {
-    flex: 1 1 100%;
-    justify-content: center;
+    gap: 8px;
   }
 
   .review-page .pdf-title {
-    max-width: 100%;
-    text-align: center;
-  }
-}
-
-@media (max-width: 720px) {
-  .review-page .toolbar {
-    padding: 14px;
+    max-width: 190px;
   }
 
   .review-page .main-content {
@@ -2485,7 +2415,6 @@ html[data-theme="dark"] .review-page .panel-resizer.dragging {
   background-color: rgba(37, 99, 235, 0.08);
   border-color: rgba(37, 99, 235, 0.28);
   color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 html[data-theme="dark"] .review-page #btn-mark-completed:not(.completed):hover:not(:disabled),
@@ -2498,4 +2427,27 @@ html[data-theme="dark"] .review-page .zoom-controls .zoom-select:focus {
   border-color: rgba(96, 165, 250, 0.5);
   color: #dbeafe;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Keep the review toolbar on one line; scroll the toolbar when necessary. */
+@media (max-width: 1080px) {
+  .review-page .toolbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .review-page .toolbar-left,
+  .review-page .toolbar-center,
+  .review-page .toolbar-right {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+  }
+
+  .review-page .pdf-title {
+    max-width: 240px;
+    text-align: left;
+  }
 }

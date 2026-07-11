@@ -58,6 +58,26 @@ class AnnotationCard extends HTMLElement {
     return this.getAttribute('highlight-rects') || '[]';
   }
 
+  getCategoryContrastColor() {
+    const hex = this.categoryColor.replace('#', '');
+    if (![3, 6].includes(hex.length) || !/^[0-9a-f]+$/i.test(hex)) {
+      return '#ffffff';
+    }
+
+    const normalized = hex.length === 3
+      ? hex.split('').map(value => value + value).join('')
+      : hex;
+    const channels = [0, 2, 4].map(index => parseInt(normalized.slice(index, index + 2), 16) / 255);
+    const luminance = channels.reduce((total, channel, index) => {
+      const linear = channel <= 0.03928
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4;
+      return total + linear * [0.2126, 0.7152, 0.0722][index];
+    }, 0);
+
+    return luminance > 0.42 ? '#171717' : '#ffffff';
+  }
+
   /**
    * Format selected text to show start and end
    * @param {string} text - The full selected text
@@ -113,8 +133,8 @@ class AnnotationCard extends HTMLElement {
         }
 
         .card.active {
-          background-color: var(--color-primary-light, rgba(59, 130, 246, 0.1));
-          border-color: var(--color-primary, #3b82f6);
+          background-color: ${this.categoryColor}18;
+          border-color: ${this.categoryColor};
         }
 
         .card-header {
@@ -129,8 +149,8 @@ class AnnotationCard extends HTMLElement {
           align-items: center;
           gap: 4px;
           padding: 2px 8px;
-          background-color: ${this.categoryColor}20;
-          color: ${this.categoryColor};
+          background-color: ${this.categoryColor};
+          color: ${this.getCategoryContrastColor()};
           border-radius: var(--radius-full, 9999px);
           font-size: 0.6875rem;
           font-weight: 500;

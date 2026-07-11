@@ -86,19 +86,19 @@ function renderCategoryList() {
         <select class="edit-icon">
           ${ICON_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === cat.icon ? 'selected' : ''}>${opt.label}</option>`).join('')}
         </select>
-        <button class="btn-save-edit" title="Save">
+        <button class="btn btn--icon btn--success-ghost btn-save-edit" title="Save">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
-        <button class="btn-cancel-edit" title="Cancel">
+        <button class="btn btn--icon btn--danger-ghost btn-cancel-edit" title="Cancel">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       ${cat.is_default ? '<span class="category-default-badge">default</span>' : ''}
       <div class="category-actions">
-        <button class="btn-edit-category" title="Edit" data-id="${cat.id}">
+        <button class="btn btn--icon btn--ghost btn-edit-category" title="Edit" data-id="${cat.id}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        ${!cat.is_default ? `<button class="btn-delete-category" title="Delete" data-id="${cat.id}">
+        ${!cat.is_default ? `<button class="btn btn--icon btn--danger-ghost btn-delete-category" title="Delete" data-id="${cat.id}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>` : ''}
       </div>

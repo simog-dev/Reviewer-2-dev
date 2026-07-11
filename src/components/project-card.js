@@ -131,7 +131,7 @@ class ProjectCard extends HTMLElement {
 
         .pc-project-name {
           color: var(--color-text, #0f172a);
-          font-family: 'Space Grotesk', sans-serif;
+          font-family: sans-serif;
           font-size: 1rem;
           font-weight: 700;
           line-height: 1.25;
@@ -457,8 +457,8 @@ class ProjectCard extends HTMLElement {
         }
 
         .pc-action-btn {
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid var(--button-tool-border, rgba(148, 163, 184, 0.28));
+          background: var(--button-tool-background, rgba(255, 255, 255, 0.88));
           color: var(--color-text-secondary, #475569);
           border-radius: 12px;
           height: 38px;
@@ -480,20 +480,18 @@ class ProjectCard extends HTMLElement {
         .pc-action-btn:hover {
           transform: translateY(-1px);
           color: var(--color-text, #0f172a);
-          border-color: rgba(59, 130, 246, 0.28);
-          background: rgba(255, 255, 255, 0.98);
+          border-color: var(--button-tool-hover-border, rgba(59, 130, 246, 0.28));
+          background: var(--button-tool-hover-background, rgba(255, 255, 255, 0.98));
           box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
         }
 
         :host-context(html[data-theme="dark"]) .pc-action-btn {
-          background: rgba(15, 23, 42, 0.9);
-          border-color: rgba(71, 85, 105, 0.42);
           color: var(--color-text-secondary, #94a3b8);
         }
 
         :host-context(html[data-theme="dark"]) .pc-action-btn:hover {
           color: var(--color-text, #e2e8f0);
-          background: rgba(15, 23, 42, 0.98);
+          background: var(--button-tool-hover-background, rgba(15, 23, 42, 0.98));
         }
 
         .pc-link-btn {

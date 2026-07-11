@@ -7,7 +7,6 @@
   <title>Reviewer 2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/home.css">
 </head>
@@ -17,7 +16,7 @@
       <div class="sidebar-brand">
         <img src="logo/logo.png" alt="Reviewer logo" class="sidebar-logo">
         <div class="sidebar-brand-copy">
-          <span class="sidebar-brand-name">Reviewer</span>
+          <span class="sidebar-brand-name">Reviewer#2</span>
         </div>
       </div>
 
@@ -117,7 +116,6 @@
     <main class="home-main">
       <section class="dashboard-hero">
         <div class="dashboard-hero-copy">
-          <p class="dashboard-kicker">Workspace</p>
           <h1 class="dashboard-title">Your projects</h1>
           <p class="dashboard-subtitle">Organize your papers and research notes.</p>
         </div>
@@ -151,13 +149,13 @@
         </div>
 
         <div class="toolbar-actions">
-          <button id="btn-project-filters" class="toolbar-button toolbar-button--secondary" type="button">
+          <button id="btn-project-filters" class="btn btn--secondary btn--toolbar" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 5h18l-7 8v5l-4 2v-7z"/>
             </svg>
             Filters
           </button>
-          <button id="btn-add-pdf" class="toolbar-button toolbar-button--primary" type="button">
+          <button id="btn-add-pdf" class="btn btn--primary btn--toolbar" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -168,9 +166,9 @@
       </section>
 
       <div class="filters-popover hidden" id="completion-filters" aria-label="Project filters">
-        <button class="filter-btn active" data-filter="all" type="button">All projects</button>
-        <button class="filter-btn" data-filter="in-progress" type="button">In progress</button>
-        <button class="filter-btn" data-filter="completed" type="button">Completed</button>
+        <button class="btn btn--chip filter-btn active" data-filter="all" type="button">All projects</button>
+        <button class="btn btn--chip filter-btn" data-filter="in-progress" type="button">In progress</button>
+        <button class="btn btn--chip filter-btn" data-filter="completed" type="button">Completed</button>
       </div>
 
       <section class="board-shell drop-zone" id="drop-zone">
@@ -209,7 +207,7 @@
           <span class="modal-kicker">Project</span>
           <h3 class="modal-title" id="project-modal-title">New Project</h3>
         </div>
-        <button class="modal-close" id="project-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="project-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -253,7 +251,7 @@
             </div>
             <div class="modal-upload-zone__title" id="project-first-paper-title">Drag and drop your paper here</div>
             <div class="modal-upload-zone__divider" id="project-first-paper-divider">or</div>
-            <button class="btn btn-secondary modal-upload-zone__action" id="project-select-paper" type="button">Select file</button>
+            <button class="btn btn--secondary modal-upload-zone__action" id="project-select-paper" type="button">Select file</button>
             <div class="modal-upload-zone__hint" id="project-first-paper-hint">Choose the first paper for this project.</div>
           </div>
           <div class="modal-upload-zone__selected">
@@ -288,8 +286,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="project-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="project-modal-confirm">Create Project</button>
+        <button class="btn btn--secondary" id="project-modal-cancel">Cancel</button>
+        <button class="btn btn--primary" id="project-modal-confirm">Create Project</button>
       </div>
     </div>
   </div>
@@ -302,7 +300,7 @@
           <span class="modal-kicker">Paper</span>
           <h3 class="modal-title" id="paper-modal-title">Edit Paper</h3>
         </div>
-        <button class="modal-close" id="paper-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="paper-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -325,8 +323,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="paper-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" id="paper-modal-confirm">Save Changes</button>
+        <button class="btn btn--secondary" id="paper-modal-cancel">Cancel</button>
+        <button class="btn btn--primary" id="paper-modal-confirm">Save Changes</button>
       </div>
     </div>
   </div>
@@ -339,7 +337,7 @@
           <span class="modal-kicker">Warning</span>
           <h3 class="modal-title">Remove PDF</h3>
         </div>
-        <button class="modal-close" id="delete-modal-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="delete-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -370,8 +368,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="delete-modal-cancel">Cancel</button>
-        <button class="btn btn-danger" id="delete-modal-confirm">Remove</button>
+        <button class="btn btn--secondary" id="delete-modal-cancel">Cancel</button>
+        <button class="btn btn--danger" id="delete-modal-confirm">Remove</button>
       </div>
     </div>
   </div>
@@ -384,7 +382,7 @@
           <span class="modal-kicker">File issue</span>
           <h3 class="modal-title">PDF File Not Found</h3>
         </div>
-        <button class="modal-close" id="pdf-not-found-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="pdf-not-found-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -409,8 +407,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="pdf-not-found-cancel">Cancel</button>
-        <button class="btn btn-primary" id="pdf-not-found-reload">Select New File</button>
+        <button class="btn btn--secondary" id="pdf-not-found-cancel">Cancel</button>
+        <button class="btn btn--primary" id="pdf-not-found-reload">Select New File</button>
       </div>
     </div>
   </div>
@@ -423,7 +421,7 @@
           <span class="modal-kicker">File issue</span>
           <h3 class="modal-title">PDF Name Changed</h3>
         </div>
-        <button class="modal-close" id="pdf-name-changed-close">
+        <button class="btn btn--icon btn--ghost modal-close" id="pdf-name-changed-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -455,8 +453,8 @@
         <p class="modal-confirm-copy">Do you want to continue?</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="pdf-name-changed-cancel">Cancel</button>
-        <button class="btn btn-primary" id="pdf-name-changed-confirm">Continue</button>
+        <button class="btn btn--secondary" id="pdf-name-changed-cancel">Cancel</button>
+        <button class="btn btn--primary" id="pdf-name-changed-confirm">Continue</button>
       </div>
     </div>
   </div>
