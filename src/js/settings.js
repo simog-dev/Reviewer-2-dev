@@ -1,8 +1,12 @@
 import ThemeManager from './theme-manager.js';
+import {
+  DEFAULT_PROMPT,
+  LLM_PROVIDER_DEFINITIONS,
+  getDefaultLLMProviderId,
+  getLLMProviderDefinition
+} from './llm-config.js';
 
-const DEFAULT_PROMPT = `You are a thorough academic paper reviewer. Based on the annotations below from a paper I'm reviewing, generate a comprehensive written review. Group findings by severity (Critical first, then Major, Minor, Suggestion, Question). For each finding, reference the page number and quoted text. Be specific, constructive, and actionable. End with a brief summary of overall quality. Output plain text, no markdown.`;
-
-const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt'];
+const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt', 'llm_base_url'];
 
 const ICON_OPTIONS = [
   { value: 'label', label: 'Label' },
@@ -37,20 +41,69 @@ async function init() {
 
 async function loadSettings() {
   const apiKey = await window.api.getSetting('llm_api_key') || '';
-  const provider = await window.api.getSetting('llm_provider') || 'google';
+  const savedProvider = await window.api.getSetting('llm_provider') || getDefaultLLMProviderId();
+  const provider = getLLMProviderDefinition(savedProvider) ? savedProvider : getDefaultLLMProviderId();
+  const providerDefinition = getLLMProviderDefinition(provider);
   const model = await window.api.getSetting('llm_model') || '';
   const temperature = await window.api.getSetting('llm_temperature') || '0.7';
   const prompt = await window.api.getSetting('llm_prompt') || DEFAULT_PROMPT;
+  const baseUrl = await window.api.getSetting('llm_base_url') || providerDefinition.defaultBaseUrl || '';
+
+  renderProviderOptions(provider);
 
   document.getElementById('api-key-input').value = apiKey;
   document.getElementById('provider-select').value = provider;
-  document.getElementById('model-input').value = model;
+  document.getElementById('model-input').value = model || providerDefinition.defaultModel || '';
+  document.getElementById('base-url-input').value = baseUrl;
+  applyProviderUI(provider);
 
   const tempSlider = document.getElementById('temperature-slider');
   tempSlider.value = temperature;
   document.getElementById('temperature-value').textContent = parseFloat(temperature).toFixed(1);
 
   document.getElementById('prompt-input').value = prompt;
+}
+
+function renderProviderOptions(selectedProviderId) {
+  const select = document.getElementById('provider-select');
+  select.innerHTML = LLM_PROVIDER_DEFINITIONS.map(provider => (
+    `<option value="${provider.id}" ${provider.id === selectedProviderId ? 'selected' : ''}>${provider.label}</option>`
+  )).join('');
+}
+
+function applyProviderUI(providerId) {
+  const provider = getLLMProviderDefinition(providerId) || getLLMProviderDefinition(getDefaultLLMProviderId());
+  const apiKeyInput = document.getElementById('api-key-input');
+  const modelInput = document.getElementById('model-input');
+  const baseUrlInput = document.getElementById('base-url-input');
+  const baseUrlGroup = document.getElementById('base-url-group');
+
+  apiKeyInput.placeholder = provider.apiKeyPlaceholder || 'Enter your API key...';
+  modelInput.placeholder = provider.modelPlaceholder || 'Enter the model ID...';
+  baseUrlInput.placeholder = provider.baseUrlPlaceholder || provider.defaultBaseUrl || 'https://api.example.com/v1';
+
+  baseUrlGroup.hidden = !provider.supportsCustomBaseUrl;
+
+  updateHelpText('api-key-hint', provider.apiKeyHelp);
+  updateHelpText('model-hint', provider.modelHelp);
+  updateHelpText('base-url-hint', provider.baseUrlHelp);
+}
+
+function updateHelpText(elementId, help) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  if (!help) {
+    element.textContent = '';
+    return;
+  }
+
+  if (help.url && help.label) {
+    element.innerHTML = `${escapeHtml(help.text)} <a href="${help.url}" target="_blank">${escapeHtml(help.label)}</a>`;
+    return;
+  }
+
+  element.textContent = help.text || '';
 }
 
 async function loadCategories() {
@@ -395,12 +448,14 @@ async function saveSettings() {
   const apiKey = document.getElementById('api-key-input').value.trim();
   const provider = document.getElementById('provider-select').value;
   const model = document.getElementById('model-input').value.trim();
+  const baseUrl = document.getElementById('base-url-input').value.trim();
   const temperature = document.getElementById('temperature-slider').value;
   const prompt = document.getElementById('prompt-input').value;
 
   await window.api.setSetting('llm_api_key', apiKey);
   await window.api.setSetting('llm_provider', provider);
   await window.api.setSetting('llm_model', model);
+  await window.api.setSetting('llm_base_url', baseUrl);
   await window.api.setSetting('llm_temperature', temperature);
   await window.api.setSetting('llm_prompt', prompt);
 
@@ -426,6 +481,17 @@ function setupEventListeners() {
   document.getElementById('btn-save').addEventListener('click', saveSettings);
 
   document.getElementById('btn-toggle-key').addEventListener('click', toggleKeyVisibility);
+
+  document.getElementById('provider-select').addEventListener('change', (e) => {
+    const nextProviderId = e.target.value;
+    const provider = getLLMProviderDefinition(nextProviderId);
+
+    if (provider) {
+      document.getElementById('model-input').value = provider.defaultModel || '';
+      document.getElementById('base-url-input').value = provider.defaultBaseUrl || '';
+      applyProviderUI(nextProviderId);
+    }
+  });
 
   document.getElementById('temperature-slider').addEventListener('input', (e) => {
     document.getElementById('temperature-value').textContent = parseFloat(e.target.value).toFixed(1);

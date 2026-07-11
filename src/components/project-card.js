@@ -5,6 +5,8 @@ class ProjectCard extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this._project = null;
+    this._paperPage = 0;
+    this._projectId = null;
   }
 
   static get observedAttributes() {
@@ -37,6 +39,10 @@ class ProjectCard extends HTMLElement {
 
   set project(value) {
     this._project = value || {};
+    if (this._projectId !== this._project.id) {
+      this._paperPage = 0;
+      this._projectId = this._project.id || null;
+    }
     this.render();
     this.addEventListeners();
   }
@@ -44,6 +50,12 @@ class ProjectCard extends HTMLElement {
   render() {
     const project = this.project;
     const papers = Array.isArray(project.papers) ? project.papers : [];
+    const sortedPapers = this.getSortedPapers(papers);
+    const pageSize = 2;
+    const pageCount = Math.max(1, Math.ceil(sortedPapers.length / pageSize));
+    this._paperPage = Math.min(Math.max(this._paperPage, 0), pageCount - 1);
+    const pageStart = this._paperPage * pageSize;
+    const visiblePapers = sortedPapers.slice(pageStart, pageStart + pageSize);
     const completed = papers.length > 0 && papers.every(paper => paper.completed === 1);
     const totalAnnotations = papers.reduce((total, paper) => total + (paper.annotation_count || 0), 0);
     const projectUpdatedLabel = formatRelativeTime(project.updated_at || new Date().toISOString());
@@ -447,6 +459,69 @@ class ProjectCard extends HTMLElement {
           transform: translateY(-1px);
         }
 
+        .pc-pagination {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          min-height: 32px;
+          color: var(--color-text-muted, #64748b);
+          font-size: 0.78rem;
+          font-weight: 700;
+        }
+
+        .pc-pagination-count {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .pc-pagination-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .pc-page-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.86);
+          color: var(--color-text-secondary, #475569);
+          cursor: pointer;
+          transition:
+            border-color 150ms ease,
+            background-color 150ms ease,
+            color 150ms ease,
+            transform 150ms ease;
+        }
+
+        .pc-page-btn:hover:not(:disabled) {
+          border-color: rgba(59, 130, 246, 0.32);
+          background: rgba(59, 130, 246, 0.08);
+          color: var(--color-primary, #2563eb);
+          transform: translateY(-1px);
+        }
+
+        .pc-page-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.42;
+        }
+
+        .pc-page-btn svg {
+          width: 15px;
+          height: 15px;
+        }
+
+        :host-context(html[data-theme="dark"]) .pc-page-btn {
+          background: rgba(15, 23, 42, 0.82);
+          border-color: rgba(71, 85, 105, 0.46);
+        }
+
         .pc-card-actions {
           display: flex;
           align-items: center;
@@ -500,7 +575,25 @@ class ProjectCard extends HTMLElement {
       </style>
     `;
 
-    const paperAddSlot = papers.length < 2 ? `
+    const pagination = pageCount > 1 ? `
+      <div class="pc-pagination" aria-label="Paper pages">
+        <span class="pc-pagination-count">Page ${this._paperPage + 1} of ${pageCount}</span>
+        <span class="pc-pagination-actions">
+          <button class="pc-page-btn pc-page-prev" type="button" ${this._paperPage === 0 ? 'disabled' : ''} aria-label="Previous papers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <button class="pc-page-btn pc-page-next" type="button" ${this._paperPage >= pageCount - 1 ? 'disabled' : ''} aria-label="Next papers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        </span>
+      </div>
+    ` : '';
+
+    const paperAddSlot = papers.length < pageSize ? `
       <button class="pc-paper-add-slot" type="button" title="Add paper">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
@@ -537,9 +630,10 @@ class ProjectCard extends HTMLElement {
         </div>
 
         <div class="pc-paper-list">
-          ${papers.map(paper => this.renderPaper(paper)).join('')}
+          ${visiblePapers.map(paper => this.renderPaper(paper)).join('')}
           ${paperAddSlot}
         </div>
+        ${pagination}
 
         <div class="pc-card-actions">
           <button class="pc-action-btn edit-project-btn" title="Edit project">
@@ -640,6 +734,27 @@ class ProjectCard extends HTMLElement {
     `;
   }
 
+  getSortedPapers(papers) {
+    return [...papers].sort((left, right) => {
+      const leftCreated = Date.parse(left.created_at || '') || 0;
+      const rightCreated = Date.parse(right.created_at || '') || 0;
+      if (leftCreated !== rightCreated) return rightCreated - leftCreated;
+
+      const leftUpdated = Date.parse(left.updated_at || '') || 0;
+      const rightUpdated = Date.parse(right.updated_at || '') || 0;
+      if (leftUpdated !== rightUpdated) return rightUpdated - leftUpdated;
+
+      return String(right.name || '').localeCompare(String(left.name || ''));
+    });
+  }
+
+  setPaperPage(page) {
+    if (page === this._paperPage) return;
+    this._paperPage = page;
+    this.render();
+    this.addEventListeners();
+  }
+
   addEventListeners() {
     this.shadowRoot.querySelectorAll('.pc-paper').forEach(paperEl => {
       const open = () => {
@@ -693,6 +808,18 @@ class ProjectCard extends HTMLElement {
           detail: { projectId: this.project.id }
         }));
       });
+    });
+
+    const prevPageBtn = this.shadowRoot.querySelector('.pc-page-prev');
+    prevPageBtn?.addEventListener('click', event => {
+      event.stopPropagation();
+      this.setPaperPage(this._paperPage - 1);
+    });
+
+    const nextPageBtn = this.shadowRoot.querySelector('.pc-page-next');
+    nextPageBtn?.addEventListener('click', event => {
+      event.stopPropagation();
+      this.setPaperPage(this._paperPage + 1);
     });
 
     const addPaperBtn = this.shadowRoot.querySelector('.add-paper-btn');

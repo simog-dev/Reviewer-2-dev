@@ -1,11 +1,22 @@
+-- User-created conference and journal directory
+CREATE TABLE IF NOT EXISTS venues (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_normalized TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     conference TEXT,
+    venue_id TEXT,
     submission_link TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL
 );
 
 -- PDFs table
@@ -76,6 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_annotations_pdf_id ON annotations(pdf_id);
 CREATE INDEX IF NOT EXISTS idx_annotations_page_number ON annotations(page_number);
 CREATE INDEX IF NOT EXISTS idx_annotations_category_id ON annotations(category_id);
 CREATE INDEX IF NOT EXISTS idx_pdfs_name ON pdfs(name);
+CREATE INDEX IF NOT EXISTS idx_venues_name_normalized ON venues(name_normalized);
 CREATE INDEX IF NOT EXISTS idx_highlights_pdf_id ON highlights(pdf_id);
 CREATE INDEX IF NOT EXISTS idx_highlights_page_number ON highlights(page_number);
 

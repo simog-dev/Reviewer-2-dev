@@ -166,9 +166,16 @@
       </section>
 
       <div class="filters-popover hidden" id="completion-filters" aria-label="Project filters">
-        <button class="btn btn--chip filter-btn active" data-filter="all" type="button">All projects</button>
-        <button class="btn btn--chip filter-btn" data-filter="in-progress" type="button">In progress</button>
-        <button class="btn btn--chip filter-btn" data-filter="completed" type="button">Completed</button>
+        <label class="filter-select-shell" for="venue-filter-select">
+          <span class="filter-select-label">Venue</span>
+          <select class="filter-select" id="venue-filter-select" aria-label="Filter by conference or journal">
+            <option value="">All venues</option>
+          </select>
+        </label>
+        <label class="filter-select-shell" for="due-date-filter-input">
+          <span class="filter-select-label">Due by</span>
+          <input class="filter-date" id="due-date-filter-input" type="date" aria-label="Filter by projects due by date">
+        </label>
       </div>
 
       <section class="board-shell drop-zone" id="drop-zone">
@@ -220,8 +227,21 @@
           <input class="input" id="project-name-input" type="text" placeholder="Defaults to the PDF name">
         </div>
         <div class="form-group">
-          <label class="form-label" for="project-conference-input">Conference</label>
-          <input class="input" id="project-conference-input" type="text" placeholder="Optional">
+          <label class="form-label" for="project-conference-input">Conference / journal</label>
+          <div class="venue-combobox">
+            <input
+              class="input"
+              id="project-conference-input"
+              type="text"
+              placeholder="Conference or journal (optional)"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="project-venue-suggestions"
+            >
+            <div class="venue-suggestions hidden" id="project-venue-suggestions" role="listbox"></div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="project-deadline-input">First paper review deadline</label>
@@ -334,8 +354,8 @@
     <div class="modal modal-home modal-home--warning">
       <div class="modal-header">
         <div class="modal-heading">
-          <span class="modal-kicker">Warning</span>
-          <h3 class="modal-title">Remove PDF</h3>
+          <span class="modal-kicker">Permanent deletion</span>
+          <h3 class="modal-title">Delete paper</h3>
         </div>
         <button class="btn btn--icon btn--ghost modal-close" id="delete-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -355,21 +375,20 @@
               </svg>
             </div>
             <div class="modal-message-card__copy">
-              <h4 class="delete-modal-title">Remove "<span id="delete-pdf-name"></span>"?</h4>
+              <h4 class="delete-modal-title">Delete "<span id="delete-pdf-name"></span>" permanently?</h4>
               <p class="delete-modal-text">
-                This will remove the PDF from your list. The original file will not be deleted.
+                This action permanently deletes the paper and all of its annotations. It cannot be undone.
+              </p>
+              <p class="delete-modal-export-hint">
+                If you need to keep them, export the annotations from the review page before deleting the paper; you can import them again later.
               </p>
             </div>
           </div>
-          <label class="delete-modal-checkbox modal-check">
-            <input type="checkbox" id="delete-annotations-checkbox" checked>
-            <span>Also delete all annotations</span>
-          </label>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn--secondary" id="delete-modal-cancel">Cancel</button>
-        <button class="btn btn--danger" id="delete-modal-confirm">Remove</button>
+        <button class="btn btn--danger" id="delete-modal-confirm">Delete permanently</button>
       </div>
     </div>
   </div>

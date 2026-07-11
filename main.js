@@ -283,13 +283,12 @@ ipcMain.handle('db:updatePDF', async (event, id, data) => {
   return db.updatePDF(id, data);
 });
 
-ipcMain.handle('db:deletePDF', async (event, id, deleteAnnotations) => {
+ipcMain.handle('db:deletePDF', async (event, id) => {
   // Get PDF info before deleting to clean up any copied file
   const pdf = db.getPDF(id);
-  const result = db.deletePDF(id, deleteAnnotations);
+  const result = db.deletePDF(id);
 
-  // Only delete the file copy when fully removing (with annotations)
-  if (deleteAnnotations && pdf && pdf.path) {
+  if (pdf && pdf.path) {
     const pdfDir = path.join(userDataPath, 'pdfs');
     if (pdf.path.startsWith(pdfDir)) {
       try {
@@ -330,6 +329,14 @@ ipcMain.handle('db:getProject', async (event, id) => {
 
 ipcMain.handle('db:updateProject', async (event, id, data) => {
   return db.updateProject(id, data);
+});
+
+ipcMain.handle('db:deleteProject', async (event, id) => {
+  return db.deleteProject(id);
+});
+
+ipcMain.handle('db:getAllVenues', async () => {
+  return db.getAllVenues();
 });
 
 // Database Operations - Annotations

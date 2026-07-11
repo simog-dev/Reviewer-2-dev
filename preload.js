@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   getAllPDFs: () => ipcRenderer.invoke('db:getAllPDFs'),
   getPDF: (id) => ipcRenderer.invoke('db:getPDF', id),
   updatePDF: (id, data) => ipcRenderer.invoke('db:updatePDF', id, data),
-  deletePDF: (id, deleteAnnotations) => ipcRenderer.invoke('db:deletePDF', id, deleteAnnotations),
+  deletePDF: (id) => ipcRenderer.invoke('db:deletePDF', id),
   searchPDFs: (query) => ipcRenderer.invoke('db:searchPDFs', query),
   markPDFCompleted: (id, reviewDecision) => ipcRenderer.invoke('db:markPDFCompleted', id, reviewDecision),
   markPDFIncomplete: (id) => ipcRenderer.invoke('db:markPDFIncomplete', id),
@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('api', {
   getAllProjects: () => ipcRenderer.invoke('db:getAllProjects'),
   getProject: (id) => ipcRenderer.invoke('db:getProject', id),
   updateProject: (id, data) => ipcRenderer.invoke('db:updateProject', id, data),
+  deleteProject: (id) => ipcRenderer.invoke('db:deleteProject', id),
+  getAllVenues: () => ipcRenderer.invoke('db:getAllVenues'),
 
   // Database Operations - Annotations
   addAnnotation: (annotationData) => ipcRenderer.invoke('db:addAnnotation', annotationData),

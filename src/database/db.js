@@ -17,6 +17,9 @@ class DBManager {
 
     this.initialize();
     this.prepareStatements();
+    this.migrateProjectVenues();
+    this.cleanupEmptyProjects();
+    this.cleanupUnusedVenues();
   }
 
   initialize() {
@@ -24,7 +27,7 @@ class DBManager {
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     this.db.exec(schema);
 
-    // Add 'removed' column for soft-delete (preserves annotations)
+    // Keep the legacy column so older databases can be cleaned up safely.
     try {
       this.db.exec(`ALTER TABLE pdfs ADD COLUMN removed INTEGER DEFAULT 0`);
     } catch (e) {
@@ -64,8 +67,13 @@ class DBManager {
     try {
       this.db.exec(`ALTER TABLE pdfs ADD COLUMN review_updated_at TEXT`);
     } catch (e) { /* already exists */ }
+    try {
+      this.db.exec(`ALTER TABLE projects ADD COLUMN venue_id TEXT`);
+    } catch (e) { /* already exists */ }
 
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_pdfs_project_id ON pdfs(project_id)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_venue_id ON projects(venue_id)`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_venues_name_normalized ON venues(name_normalized)`);
 
     // Migrate old completion_comment to review_decision if column exists
     try {
@@ -78,6 +86,44 @@ class DBManager {
     } catch (e) { /* ignore */ }
 
     this.migratePDFsToProjects();
+  }
+
+  normalizeVenueName(name) {
+    return name.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  ensureVenue(name) {
+    if (typeof name !== 'string') return null;
+
+    const displayName = name.trim().replace(/\s+/g, ' ');
+    if (!displayName) return null;
+
+    const normalizedName = this.normalizeVenueName(displayName);
+    this.stmts.insertVenue.run({
+      id: uuidv4(),
+      name: displayName,
+      nameNormalized: normalizedName
+    });
+
+    return this.stmts.getVenueByNormalized.get(normalizedName);
+  }
+
+  migrateProjectVenues() {
+    const projects = this.db.prepare(`
+      SELECT id, conference
+      FROM projects
+      WHERE conference IS NOT NULL AND trim(conference) != ''
+    `).all();
+
+    const assignVenue = this.db.prepare(`UPDATE projects SET venue_id = ? WHERE id = ?`);
+    const migrate = this.db.transaction((rows) => {
+      rows.forEach(project => {
+        const venue = this.ensureVenue(project.conference);
+        if (venue) assignVenue.run(venue.id, project.id);
+      });
+    });
+
+    migrate(projects);
   }
 
   migratePDFsToProjects() {
@@ -179,20 +225,24 @@ class DBManager {
         WHERE p.removed = 0 AND (p.name LIKE ? OR pr.name LIKE ? OR pr.conference LIKE ?)
         ORDER BY p.updated_at DESC
       `),
-      softDeletePDF: this.db.prepare(`UPDATE pdfs SET removed = 1, updated_at = datetime('now') WHERE id = ?`),
-      restorePDF: this.db.prepare(`UPDATE pdfs SET removed = 0, updated_at = datetime('now') WHERE id = ?`),
       findRemovedPDFByPath: this.db.prepare(`SELECT * FROM pdfs WHERE path = ? AND removed = 1`),
+      countActivePDFsForProject: this.db.prepare(`
+        SELECT COUNT(*) as count
+        FROM pdfs
+        WHERE project_id = ? AND removed = 0
+      `),
 
       // Projects
       insertProject: this.db.prepare(`
-        INSERT INTO projects (id, name, conference, submission_link, created_at, updated_at)
-        VALUES (@id, @name, @conference, @submissionLink, datetime('now'), datetime('now'))
+        INSERT INTO projects (id, name, conference, venue_id, submission_link, created_at, updated_at)
+        VALUES (@id, @name, @conference, @venueId, @submissionLink, datetime('now'), datetime('now'))
       `),
       getProject: this.db.prepare(`SELECT * FROM projects WHERE id = ?`),
       updateProject: this.db.prepare(`
         UPDATE projects
         SET name = COALESCE(@name, name),
             conference = @conference,
+            venue_id = @venueId,
             submission_link = @submissionLink,
             updated_at = datetime('now')
         WHERE id = @id
@@ -204,6 +254,49 @@ class DBManager {
         FROM pdfs p
         WHERE p.project_id = ? AND p.removed = 0
         ORDER BY p.created_at ASC
+      `),
+      getEmptyProjectIds: this.db.prepare(`
+        SELECT pr.id
+        FROM projects pr
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM pdfs p
+          WHERE p.project_id = pr.id AND p.removed = 0
+        )
+      `),
+      deleteAnnotationsForProject: this.db.prepare(`
+        DELETE FROM annotations
+        WHERE pdf_id IN (
+          SELECT id
+          FROM pdfs
+          WHERE project_id = ?
+        )
+      `),
+      deleteHighlightsForProject: this.db.prepare(`
+        DELETE FROM highlights
+        WHERE pdf_id IN (
+          SELECT id
+          FROM pdfs
+          WHERE project_id = ?
+        )
+      `),
+      deletePDFsForProject: this.db.prepare(`DELETE FROM pdfs WHERE project_id = ?`),
+
+      // Venues
+      insertVenue: this.db.prepare(`
+        INSERT INTO venues (id, name, name_normalized, created_at, updated_at)
+        VALUES (@id, @name, @nameNormalized, datetime('now'), datetime('now'))
+        ON CONFLICT(name_normalized) DO UPDATE SET updated_at = datetime('now')
+      `),
+      getVenueByNormalized: this.db.prepare(`SELECT * FROM venues WHERE name_normalized = ?`),
+      getAllVenues: this.db.prepare(`SELECT * FROM venues ORDER BY name COLLATE NOCASE ASC`),
+      deleteUnusedVenues: this.db.prepare(`
+        DELETE FROM venues
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM projects
+          WHERE projects.venue_id = venues.id
+        )
       `),
 
       // Annotations
@@ -288,13 +381,13 @@ class DBManager {
 
   // PDF Methods
   addPDF(pdfData) {
-    // Check if this PDF was soft-deleted (removed but annotations kept)
     const removed = this.stmts.findRemovedPDFByPath.get(pdfData.path);
     if (removed) {
-      // Restore it — same ID, so all annotations are still linked
-      this.stmts.restorePDF.run(removed.id);
-      this.updatePDF(removed.id, { lastOpenedAt: new Date().toISOString() });
-      return this.getPDF(removed.id);
+      this.hardDeletePDFRecord(removed.id);
+      if (removed.project_id && this.stmts.countActivePDFsForProject.get(removed.project_id).count === 0) {
+        this.hardDeleteProjectRecord(removed.project_id);
+        this.cleanupUnusedVenues();
+      }
     }
 
     const existing = this.db.prepare('SELECT * FROM pdfs WHERE path = ? AND removed = 0').get(pdfData.path);
@@ -324,10 +417,12 @@ class DBManager {
   createProjectForPDF(pdfData) {
     const projectId = uuidv4();
     const projectName = pdfData.projectName || pdfData.name;
+    const venue = this.ensureVenue(pdfData.conference);
     this.stmts.insertProject.run({
       id: projectId,
       name: projectName,
-      conference: pdfData.conference || null,
+      conference: venue?.name || null,
+      venueId: venue?.id || null,
       submissionLink: pdfData.submissionLink || null
     });
     return this.getProject(projectId);
@@ -335,10 +430,12 @@ class DBManager {
 
   addProject(projectData) {
     const id = uuidv4();
+    const venue = this.ensureVenue(projectData.conference);
     this.stmts.insertProject.run({
       id,
       name: projectData.name,
-      conference: projectData.conference || null,
+      conference: venue?.name || null,
+      venueId: venue?.id || null,
       submissionLink: projectData.submissionLink || null
     });
     return this.getProject(id);
@@ -354,13 +451,30 @@ class DBManager {
   }
 
   updateProject(id, data) {
-    this.stmts.updateProject.run({
-      id,
-      name: data.name || null,
-      conference: data.conference ?? null,
-      submissionLink: data.submissionLink ?? null
+    const update = this.db.transaction(() => {
+      const venue = this.ensureVenue(data.conference);
+      this.stmts.updateProject.run({
+        id,
+        name: data.name || null,
+        conference: venue?.name || null,
+        venueId: venue?.id || null,
+        submissionLink: data.submissionLink ?? null
+      });
+      this.cleanupUnusedVenues();
     });
+
+    update();
     return this.getProject(id);
+  }
+
+  deleteProject(id) {
+    const remove = this.db.transaction(() => {
+      const result = this.hardDeleteProjectRecord(id);
+      this.cleanupUnusedVenues();
+      return result;
+    });
+
+    return remove();
   }
 
   getAllProjects() {
@@ -390,6 +504,41 @@ class DBManager {
     });
   }
 
+  getAllVenues() {
+    this.cleanupEmptyProjects();
+    this.cleanupUnusedVenues();
+    return this.stmts.getAllVenues.all();
+  }
+
+  cleanupUnusedVenues() {
+    return this.stmts.deleteUnusedVenues.run();
+  }
+
+  cleanupEmptyProjects() {
+    const remove = this.db.transaction(() => {
+      const projectIds = this.stmts.getEmptyProjectIds.all();
+      projectIds.forEach(({ id }) => {
+        this.hardDeleteProjectRecord(id);
+      });
+      return { changes: projectIds.length };
+    });
+
+    return remove();
+  }
+
+  hardDeleteProjectRecord(id) {
+    this.stmts.deleteAnnotationsForProject.run(id);
+    this.stmts.deleteHighlightsForProject.run(id);
+    this.stmts.deletePDFsForProject.run(id);
+    return this.stmts.deleteProject.run(id);
+  }
+
+  hardDeletePDFRecord(id) {
+    this.stmts.deleteAnnotationsForPDF.run(id);
+    this.stmts.deleteHighlightsForPDF.run(id);
+    return this.stmts.deletePDF.run(id);
+  }
+
   getAllPDFs() {
     return this.stmts.getAllPDFs.all();
   }
@@ -415,15 +564,24 @@ class DBManager {
     return this.getPDF(id);
   }
 
-  deletePDF(id, deleteAnnotations = true) {
-    if (deleteAnnotations) {
-      // Hard delete: remove annotations then PDF row (CASCADE would also work)
-      this.stmts.deleteAnnotationsForPDF.run(id);
-      return this.stmts.deletePDF.run(id);
-    } else {
-      // Soft delete: hide the PDF but keep annotations intact
-      return this.stmts.softDeletePDF.run(id);
-    }
+  deletePDF(id) {
+    const remove = this.db.transaction(() => {
+      const pdf = this.getPDF(id);
+      if (!pdf) return { changes: 0, projectDeleted: false };
+
+      const result = this.hardDeletePDFRecord(id);
+      const projectDeleted = Boolean(pdf.project_id)
+        && this.stmts.countActivePDFsForProject.get(pdf.project_id).count === 0;
+
+      if (projectDeleted) {
+        this.hardDeleteProjectRecord(pdf.project_id);
+      }
+
+      this.cleanupUnusedVenues();
+      return { ...result, projectDeleted };
+    });
+
+    return remove();
   }
 
   searchPDFs(query) {

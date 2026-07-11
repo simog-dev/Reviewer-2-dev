@@ -1474,10 +1474,11 @@ async function generateReview() {
     const apiKey = await window.api.getSetting('llm_api_key');
     const provider = await window.api.getSetting('llm_provider') || 'google';
     const model = await window.api.getSetting('llm_model') || '';
+    const baseUrl = await window.api.getSetting('llm_base_url') || '';
     const temperature = parseFloat(await window.api.getSetting('llm_temperature') || '0.7');
     const prompt = await window.api.getSetting('llm_prompt') || undefined;
 
-    const llmProvider = createLLMProvider(provider, { apiKey, model, temperature, prompt });
+    const llmProvider = createLLMProvider(provider, { apiKey, model, baseUrl, temperature, prompt });
     const reviewText = await llmProvider.generateReview(annotations, pdfData.name);
     const generatedHtml = formatReviewTextAsHtml(reviewText);
     reviewEditor.innerHTML = generatedHtml;

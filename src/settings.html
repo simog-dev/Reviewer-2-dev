@@ -57,7 +57,7 @@
           <div class="form-group">
             <label class="form-label" for="api-key-input">API Key</label>
             <div class="api-key-wrapper">
-              <input type="password" class="input" id="api-key-input" placeholder="Enter your Google Gemini API key...">
+              <input type="password" class="input" id="api-key-input" placeholder="Enter your API key...">
               <button class="btn-toggle-visibility" id="btn-toggle-key" title="Show/hide key" type="button">
                 <!-- Eye icon (visible when key is hidden) -->
                 <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -72,20 +72,24 @@
                 </svg>
               </button>
             </div>
-            <span class="form-hint">Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></span>
+            <span class="form-hint" id="api-key-hint"></span>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="provider-select">Provider</label>
-            <select class="select" id="provider-select">
-              <option value="google">Google Gemini</option>
-            </select>
+            <select class="select" id="provider-select"></select>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="model-input">Model</label>
-            <input type="text" class="input" id="model-input" placeholder="e.g. gemini-2.5-flash">
-            <span class="form-hint">See available models at <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank">Google Gemini API docs</a></span>
+            <input type="text" class="input" id="model-input" placeholder="Enter the model ID...">
+            <span class="form-hint" id="model-hint"></span>
+          </div>
+
+          <div class="form-group" id="base-url-group" hidden>
+            <label class="form-label" for="base-url-input">Base URL</label>
+            <input type="url" class="input" id="base-url-input" placeholder="https://api.openai.com/v1">
+            <span class="form-hint" id="base-url-hint"></span>
           </div>
 
           <div class="form-group">

@@ -12,9 +12,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 // State
 let allPDFs = [];
 let allProjects = [];
+let allVenues = [];
 let filteredProjects = [];
 let searchQuery = '';
 let dashboardFilter = 'all'; // 'all', 'in-progress', 'completed'
+let venueFilter = '';
+let dueDateFilter = '';
 let deleteTargetId = null;
 let notFoundPdfId = null;
 let pendingNewPath = null;
@@ -24,6 +27,8 @@ let editingProjectId = null;
 let editingPaperId = null;
 let pendingPaperFilePath = null;
 let pendingPaperProjectId = null;
+let activeVenueSuggestionIndex = -1;
+let venueSuggestionsCloseTimer = null;
 
 // DOM Elements
 const loadingState = document.getElementById('loading-state');
@@ -38,7 +43,8 @@ const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const toastContainer = document.getElementById('toast-container');
 const filtersPopover = document.getElementById('completion-filters');
 const sidebarFilterButtons = Array.from(document.querySelectorAll('.home-sidebar .sidebar-nav-item[data-filter]'));
-const filterButtons = Array.from(filtersPopover.querySelectorAll('.filter-btn'));
+const venueFilterSelect = document.getElementById('venue-filter-select');
+const dueDateFilterInput = document.getElementById('due-date-filter-input');
 const countInProgress = document.getElementById('count-in-progress');
 const countCompleted = document.getElementById('count-completed');
 const countPapers = document.getElementById('count-papers');
@@ -50,6 +56,7 @@ const projectModalCancel = document.getElementById('project-modal-cancel');
 const projectModalConfirm = document.getElementById('project-modal-confirm');
 const projectNameInput = document.getElementById('project-name-input');
 const projectConferenceInput = document.getElementById('project-conference-input');
+const projectVenueSuggestions = document.getElementById('project-venue-suggestions');
 const projectDeadlineInput = document.getElementById('project-deadline-input');
 const projectSubmissionLinkInput = document.getElementById('project-submission-link-input');
 const projectFirstPaper = document.getElementById('project-first-paper');
@@ -77,7 +84,6 @@ const deleteModalClose = document.getElementById('delete-modal-close');
 const deleteModalCancel = document.getElementById('delete-modal-cancel');
 const deleteModalConfirm = document.getElementById('delete-modal-confirm');
 const deletePdfName = document.getElementById('delete-pdf-name');
-const deleteAnnotationsCheckbox = document.getElementById('delete-annotations-checkbox');
 
 // PDF Not Found Modal Elements
 const pdfNotFoundModal = document.getElementById('pdf-not-found-modal');
@@ -106,9 +112,59 @@ async function init() {
     pdfNotFoundModal,
     pdfNameChangedModal
   ]);
-  await loadPDFs();
+  await refreshProjectData();
   setupEventListeners();
   setupKeyboardShortcuts();
+}
+
+async function refreshProjectData() {
+  await loadVenues();
+  await loadPDFs();
+}
+
+async function loadVenues() {
+  try {
+    allVenues = await window.api.getAllVenues();
+    renderVenueFilterOptions();
+  } catch (error) {
+    console.error('Error loading venues:', error);
+    allVenues = [];
+    renderVenueFilterOptions();
+  }
+}
+
+function getNormalizedVenueName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getDateOnly(value) {
+  return String(value || '').slice(0, 10);
+}
+
+function renderVenueFilterOptions() {
+  if (!venueFilterSelect) return;
+
+  const currentValue = venueFilter;
+  const availableVenueValues = new Set(allVenues.map(venue => getNormalizedVenueName(venue.name)));
+
+  venueFilterSelect.innerHTML = '';
+
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = 'All venues';
+  venueFilterSelect.appendChild(allOption);
+
+  allVenues.forEach(venue => {
+    const option = document.createElement('option');
+    option.value = getNormalizedVenueName(venue.name);
+    option.textContent = venue.name;
+    venueFilterSelect.appendChild(option);
+  });
+
+  venueFilter = availableVenueValues.has(currentValue) ? currentValue : '';
+  venueFilterSelect.value = venueFilter;
+  venueFilterSelect.disabled = allVenues.length === 0;
+  updateFilterControlsState();
 }
 
 // Load PDFs from database
@@ -145,16 +201,27 @@ function filterAndRender() {
     filtered = filtered.filter(project => !isProjectCompleted(project));
   }
 
+  if (venueFilter) {
+    filtered = filtered.filter(project => getNormalizedVenueName(project.conference) === venueFilter);
+  }
+
+  if (dueDateFilter) {
+    filtered = filtered.filter(project => {
+      const deadline = getDateOnly(project.next_deadline);
+      return deadline && deadline <= dueDateFilter;
+    });
+  }
+
   filteredProjects = filtered;
 
   hideLoading();
   updateDashboardStats();
-  updateSidebarState();
+  updateFilterControlsState();
 
   if (filteredProjects.length === 0) {
     if (allProjects.length === 0) {
       renderProjects([]);
-    } else if (searchQuery) {
+    } else if (searchQuery || venueFilter || dueDateFilter) {
       showEmpty('No projects match your search', 'Try adjusting the search or filters, or create a new project.');
     } else if (dashboardFilter === 'completed') {
       showEmpty('No completed projects yet', 'Once a project is finished it will appear here.');
@@ -243,22 +310,41 @@ function updateDashboardStats() {
   if (countPapers) countPapers.textContent = paperCount;
 }
 
-function updateSidebarState() {
+function updateFilterControlsState() {
   sidebarFilterButtons.forEach(button => {
     const isActive = button.dataset.filter === dashboardFilter;
     button.classList.toggle('is-active', isActive);
   });
 
-  filterButtons.forEach(button => {
-    const isActive = button.dataset.filter === dashboardFilter;
-    button.classList.toggle('active', isActive);
-  });
+  if (venueFilterSelect) {
+    venueFilterSelect.value = venueFilter;
+  }
+
+  if (dueDateFilterInput) {
+    dueDateFilterInput.value = dueDateFilter;
+  }
+
+  if (btnProjectFilters) {
+    btnProjectFilters.classList.toggle('active', Boolean(venueFilter) || Boolean(dueDateFilter));
+  }
 }
 
 function setDashboardFilter(filter) {
   dashboardFilter = filter;
-  updateSidebarState();
+  updateFilterControlsState();
   hideFiltersMenu();
+  filterAndRender();
+}
+
+function setVenueFilter(value) {
+  venueFilter = value;
+  updateFilterControlsState();
+  filterAndRender();
+}
+
+function setDueDateFilter(value) {
+  dueDateFilter = value;
+  updateFilterControlsState();
   filterAndRender();
 }
 
@@ -295,6 +381,7 @@ function showProjectModal(filePath) {
   projectNameInput.placeholder = 'Defaults to the PDF name';
   projectNameInput.value = '';
   projectConferenceInput.value = '';
+  hideVenueSuggestions();
   projectDeadlineInput.value = '';
   projectSubmissionLinkInput.value = '';
   projectModal.classList.add('active');
@@ -314,6 +401,7 @@ function showProjectEditModal(project) {
   projectNameInput.placeholder = 'Project name';
   projectNameInput.value = project.name || '';
   projectConferenceInput.value = project.conference || '';
+  hideVenueSuggestions();
   projectDeadlineInput.value = '';
   projectSubmissionLinkInput.value = project.submission_link || '';
   projectModal.classList.add('active');
@@ -323,6 +411,7 @@ function showProjectEditModal(project) {
 
 function closeProjectModal() {
   projectModal.classList.remove('active');
+  hideVenueSuggestions();
   pendingProjectFilePath = null;
   pendingProjectFileDetails = null;
   editingProjectId = null;
@@ -355,11 +444,96 @@ async function confirmProjectEdit() {
 
   try {
     await window.api.updateProject(projectId, data);
-    await loadPDFs();
+    await refreshProjectData();
     showToast('Project updated successfully', 'success');
   } catch (error) {
     console.error('Error updating project:', error);
     showToast('Failed to update project: ' + error.message, 'error');
+  }
+}
+
+function getMatchingVenues(query) {
+  const normalizedQuery = query.trim().toLowerCase();
+  return allVenues
+    .filter(venue => !normalizedQuery || venue.name.toLowerCase().includes(normalizedQuery))
+    .slice(0, 8);
+}
+
+function renderVenueSuggestions() {
+  if (!projectVenueSuggestions) return;
+
+  const matches = getMatchingVenues(projectConferenceInput.value);
+  activeVenueSuggestionIndex = -1;
+  projectVenueSuggestions.innerHTML = '';
+
+  if (!matches.length) {
+    hideVenueSuggestions();
+    return;
+  }
+
+  matches.forEach((venue, index) => {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'venue-suggestion';
+    option.dataset.index = String(index);
+    option.dataset.venueName = venue.name;
+    option.setAttribute('role', 'option');
+    option.textContent = venue.name;
+    option.addEventListener('mousedown', event => {
+      event.preventDefault();
+      selectVenueSuggestion(venue.name);
+    });
+    projectVenueSuggestions.appendChild(option);
+  });
+
+  projectVenueSuggestions.classList.remove('hidden');
+  projectConferenceInput.setAttribute('aria-expanded', 'true');
+}
+
+function hideVenueSuggestions() {
+  if (!projectVenueSuggestions) return;
+  window.clearTimeout(venueSuggestionsCloseTimer);
+  activeVenueSuggestionIndex = -1;
+  projectVenueSuggestions.classList.add('hidden');
+  projectVenueSuggestions.innerHTML = '';
+  projectConferenceInput?.setAttribute('aria-expanded', 'false');
+}
+
+function selectVenueSuggestion(name) {
+  projectConferenceInput.value = name;
+  hideVenueSuggestions();
+  projectConferenceInput.focus();
+}
+
+function updateActiveVenueSuggestion(index) {
+  const options = Array.from(projectVenueSuggestions?.querySelectorAll('.venue-suggestion') || []);
+  if (!options.length) return;
+
+  activeVenueSuggestionIndex = (index + options.length) % options.length;
+  options.forEach((option, optionIndex) => {
+    option.classList.toggle('is-active', optionIndex === activeVenueSuggestionIndex);
+    option.setAttribute('aria-selected', optionIndex === activeVenueSuggestionIndex ? 'true' : 'false');
+  });
+  options[activeVenueSuggestionIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function handleVenueInput() {
+  renderVenueSuggestions();
+}
+
+function handleVenueKeydown(event) {
+  const options = Array.from(projectVenueSuggestions?.querySelectorAll('.venue-suggestion') || []);
+  if (event.key === 'ArrowDown' && options.length) {
+    event.preventDefault();
+    updateActiveVenueSuggestion(activeVenueSuggestionIndex + 1);
+  } else if (event.key === 'ArrowUp' && options.length) {
+    event.preventDefault();
+    updateActiveVenueSuggestion(activeVenueSuggestionIndex - 1);
+  } else if (event.key === 'Enter' && activeVenueSuggestionIndex >= 0 && options[activeVenueSuggestionIndex]) {
+    event.preventDefault();
+    selectVenueSuggestion(options[activeVenueSuggestionIndex].dataset.venueName);
+  } else if (event.key === 'Escape') {
+    hideVenueSuggestions();
   }
 }
 
@@ -670,7 +844,7 @@ async function addPDFFromPath(filePath, options = {}) {
       showToast(options.projectId ? 'Paper added successfully' : 'Project created successfully', 'success');
     }
 
-    await loadPDFs();
+    await refreshProjectData();
 
     // Navigate to review page
     await window.api.navigateToReview(pdf.id);
@@ -703,7 +877,6 @@ function handleDeletePDF(id, name) {
   resetDraggableModal(deleteModal);
   deleteTargetId = id;
   deletePdfName.textContent = name;
-  deleteAnnotationsCheckbox.checked = true;
   deleteModal.classList.add('active');
 }
 
@@ -711,12 +884,11 @@ async function confirmDelete() {
   if (!deleteTargetId) return;
 
   try {
-    const deleteAnnotations = deleteAnnotationsCheckbox.checked;
-    await window.api.deletePDF(deleteTargetId, deleteAnnotations);
+    await window.api.deletePDF(deleteTargetId);
 
     closeDeleteModal();
-    await loadPDFs();
-    showToast('PDF removed successfully', 'success');
+    await refreshProjectData();
+    showToast('Paper and annotations deleted permanently', 'success');
   } catch (error) {
     console.error('Error deleting PDF:', error);
     showToast('Failed to remove PDF', 'error');
@@ -1004,6 +1176,15 @@ function setupEventListeners() {
   projectModalClose.addEventListener('click', closeProjectModal);
   projectModalCancel.addEventListener('click', closeProjectModal);
   projectModalConfirm.addEventListener('click', confirmProjectModal);
+  projectConferenceInput.addEventListener('input', handleVenueInput);
+  projectConferenceInput.addEventListener('focus', () => {
+    window.clearTimeout(venueSuggestionsCloseTimer);
+    renderVenueSuggestions();
+  });
+  projectConferenceInput.addEventListener('blur', () => {
+    venueSuggestionsCloseTimer = window.setTimeout(hideVenueSuggestions, 120);
+  });
+  projectConferenceInput.addEventListener('keydown', handleVenueKeydown);
   projectSelectPaperBtn?.addEventListener('click', handleProjectPaperSelection);
   projectSelectPaperAltBtn?.addEventListener('click', handleProjectPaperSelection);
   projectFirstPaper?.addEventListener('dragover', handleProjectPaperDragOver);
@@ -1097,14 +1278,12 @@ function setupEventListeners() {
     });
   });
 
-  // Toolbar filter buttons
-  filterButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const filter = btn.dataset.filter;
-      if (filter) {
-        setDashboardFilter(filter);
-      }
-    });
+  venueFilterSelect?.addEventListener('change', () => {
+    setVenueFilter(venueFilterSelect.value);
+  });
+
+  dueDateFilterInput?.addEventListener('change', () => {
+    setDueDateFilter(dueDateFilterInput.value);
   });
 
   document.addEventListener('click', (event) => {
