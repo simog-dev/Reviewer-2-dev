@@ -305,6 +305,7 @@ function renderProjects(projects) {
   emptyState.classList.add('hidden');
   pdfGrid.classList.remove('hidden');
   pdfGrid.classList.remove('pdf-grid--papers');
+  pdfGrid.classList.add('pdf-grid--projects');
 
   pdfGrid.innerHTML = '';
   projects.forEach(project => {
@@ -340,6 +341,7 @@ function renderProjects(projects) {
 function renderPapers(papers) {
   emptyState.classList.add('hidden');
   pdfGrid.classList.remove('hidden');
+  pdfGrid.classList.remove('pdf-grid--projects');
   pdfGrid.classList.add('pdf-grid--papers');
 
   pdfGrid.innerHTML = '';

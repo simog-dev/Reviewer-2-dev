@@ -344,7 +344,6 @@ html[data-theme="dark"] .search-shell {
 }
 
 .search-shell-icon svg,
-.search-shell-action svg,
 .btn--toolbar svg {
   width: 18px;
   height: 18px;
@@ -364,18 +363,6 @@ html[data-theme="dark"] .search-shell {
   color: var(--color-text-muted);
 }
 
-.search-shell-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  pointer-events: none;
-}
 
 .toolbar-actions {
   display: flex;
@@ -515,11 +502,21 @@ html[data-theme="dark"] .filter-select-shell {
 
 .pdf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 450px));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 18px;
   align-content: start;
-  justify-content: start;
+  justify-content: stretch;
   padding: 6px 0 24px;
+}
+
+.pdf-grid--projects {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (min-width: 1260px) {
+  .pdf-grid--projects {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .pdf-grid--papers {
@@ -559,7 +556,6 @@ html[data-theme="dark"] .pdf-grid--papers .pdf-card__card:hover {
 project-card {
   display: block;
   min-width: 0;
-  max-width: 540px;
   min-height: 100%;
 }
 
@@ -569,7 +565,6 @@ project-card {
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 560px;
   min-height: 220px;
   padding: 28px;
   appearance: none;
@@ -1134,7 +1129,7 @@ html[data-theme="dark"] .home-page .modal-upload-zone__replace-zone {
   }
 
   .pdf-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 560px));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
 
@@ -1321,7 +1316,7 @@ html[data-theme="dark"] .home-page .modal-upload-zone__replace-zone {
   }
 
   .pdf-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 560px));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
 
@@ -1330,7 +1325,6 @@ html[data-theme="dark"] .home-page .modal-upload-zone__replace-zone {
 project-card {
   display: block;
   box-sizing: border-box;
-  max-width: 560px;
   height: 100%;
 }
 
