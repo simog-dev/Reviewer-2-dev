@@ -4,6 +4,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { version: appVersion } = require('../../package.json');
 const {
   launchApp,
   closeApp,
@@ -139,7 +140,7 @@ test.describe('PDF Reviewer Application', () => {
         window.evaluate(() => window.api.navigateToSettings())
       ]);
 
-      await expect(window.locator('#app-version')).toHaveText('Version 1.0.1');
+      await expect(window.locator('#app-version')).toHaveText(`Version ${appVersion}`);
       await window.locator('#btn-check-updates').click();
       await expect(window.locator('.update-notice__title')).toHaveText('Update check unavailable');
 
