@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components/modal.css">
   <link rel="stylesheet" href="css/review.css">
 </head>
 <body class="review-page">
@@ -64,8 +65,9 @@
         <!-- Dual Page Toggle -->
         <button class="btn btn--tool btn-dual-page" id="btn-dual-page" title="Dual Page View (D)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="8" height="18" rx="1"/>
-            <rect x="14" y="3" width="8" height="18" rx="1"/>
+            <path d="M12 6.25C10.33 5.09 8.35 4.5 6.33 4.5H4.75A1.75 1.75 0 0 0 3 6.25v12A1.75 1.75 0 0 0 4.75 20H7c1.86 0 3.64.63 5 1.75V6.25Z"/>
+            <path d="M12 6.25c1.67-1.16 3.65-1.75 5.67-1.75h1.58A1.75 1.75 0 0 1 21 6.25v12A1.75 1.75 0 0 1 19.25 20H17c-1.86 0-3.64.63-5 1.75V6.25Z"/>
+            <path d="M12 6.25v15.5" stroke-linecap="round"/>
           </svg>
         </button>
 
@@ -532,7 +534,10 @@
   <div class="modal-overlay annotation-modal" id="annotation-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 class="modal-title" id="modal-title">Add Annotation</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Annotation</span>
+          <h3 class="modal-title" id="modal-title">Add Annotation</h3>
+        </div>
         <button class="btn btn--icon btn--ghost modal-close" id="modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -551,7 +556,7 @@
           <label class="form-label">Category</label>
           <div class="category-display">
             <span class="category-badge" id="category-badge"></span>
-            <select class="select" id="category-select" style="flex: 1;">
+            <select class="select annotation-modal__category-select" id="category-select">
               <!-- Populated dynamically -->
             </select>
           </div>
@@ -572,7 +577,10 @@
   <div class="modal-overlay" id="completion-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 class="modal-title" id="completion-modal-title">Mark as Completed</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Review status</span>
+          <h3 class="modal-title" id="completion-modal-title">Mark as Completed</h3>
+        </div>
         <button class="btn btn--icon btn--ghost modal-close" id="completion-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -602,7 +610,10 @@
   <div class="modal-overlay" id="pdf-not-found-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 class="modal-title">PDF File Not Found</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">File issue</span>
+          <h3 class="modal-title">PDF File Not Found</h3>
+        </div>
         <button class="btn btn--icon btn--ghost modal-close" id="pdf-not-found-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -611,9 +622,20 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>Cannot find the PDF file at:</p>
-        <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 8px; margin: 12px 0; font-family: monospace; word-break: break-all; font-size: 13px;" id="pdf-not-found-path"></div>
-        <p style="margin-top: 12px;">The file may have been moved, renamed, or deleted.</p>
+        <div class="modal-message-card modal-message-card--warning">
+          <div class="modal-message-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div class="modal-message-card__copy">
+            <p class="modal-message-card__title">Cannot find the PDF file at:</p>
+            <div class="modal-code-block" id="pdf-not-found-path"></div>
+            <p class="modal-message-card__text">The file may have been moved, renamed, or deleted.</p>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn--secondary" id="pdf-not-found-back">Go Back</button>
@@ -626,7 +648,10 @@
   <div class="modal-overlay" id="import-compatibility-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 class="modal-title">Import Annotations</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Import</span>
+          <h3 class="modal-title">Import Annotations</h3>
+        </div>
         <button class="btn btn--icon btn--ghost modal-close" id="import-compatibility-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -635,7 +660,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <p id="import-compatibility-message"></p>
+        <p class="modal-message" id="import-compatibility-message"></p>
       </div>
       <div class="modal-footer">
         <button class="btn btn--secondary" id="import-compatibility-cancel">Cancel</button>
@@ -648,7 +673,10 @@
   <div class="modal-overlay" id="delete-annotation-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 class="modal-title">Delete Annotation</h3>
+        <div class="modal-heading">
+          <span class="modal-kicker">Permanent deletion</span>
+          <h3 class="modal-title">Delete Annotation</h3>
+        </div>
         <button class="btn btn--icon btn--ghost modal-close" id="delete-annotation-modal-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -657,7 +685,19 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>Are you sure you want to delete this annotation? This action cannot be undone.</p>
+        <div class="modal-message-card modal-message-card--danger">
+          <div class="modal-message-card__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div class="modal-message-card__copy">
+            <p class="modal-message-card__title">Delete this annotation permanently?</p>
+            <p class="modal-message-card__text">This action cannot be undone.</p>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn--secondary" id="delete-annotation-modal-cancel">Cancel</button>

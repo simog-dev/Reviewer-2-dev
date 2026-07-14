@@ -6,7 +6,19 @@ class PDFCard extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['pdf-id', 'name', 'path', 'page-count', 'annotation-count', 'updated-at', 'completed', 'review-decision'];
+    return [
+      'pdf-id',
+      'name',
+      'path',
+      'page-count',
+      'annotation-count',
+      'updated-at',
+      'completed',
+      'review-decision',
+      'project-name',
+      'venue',
+      'due-date'
+    ];
   }
 
   connectedCallback() {
@@ -53,10 +65,49 @@ class PDFCard extends HTMLElement {
     return this.getAttribute('review-decision');
   }
 
+  get projectName() {
+    return this.getAttribute('project-name') || '';
+  }
+
+  get venue() {
+    return this.getAttribute('venue') || '';
+  }
+
+  get dueDate() {
+    return this.getAttribute('due-date') || '';
+  }
+
+  escape(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  formatDueDate(value) {
+    if (!value) return '';
+
+    const [year, month, day] = String(value).slice(0, 10).split('-');
+    if (!year || !month || !day) return String(value);
+
+    return `${day}/${month}/${year}`;
+  }
+
   render() {
     const truncatedPath = this.path.length > 40
       ? '...' + this.path.slice(-37)
       : this.path;
+    const safeName = this.escape(this.name);
+    const safePath = this.escape(this.path);
+    const safeTruncatedPath = this.escape(truncatedPath);
+    const safeProjectName = this.escape(this.projectName);
+    const safeVenue = this.escape(this.venue);
+    const dueDateLabel = this.dueDate ? `Due by ${this.formatDueDate(this.dueDate)}` : 'No due date';
+    const dueDateClass = this.dueDate ? 'pdf-card__context-pill--date' : 'pdf-card__context-pill--muted';
+    const safeDueDate = this.escape(dueDateLabel);
+    const safeReviewDecision = this.escape(this.reviewDecision);
 
     const reviewDecisionLabels = {
       'accept': 'Accept',
@@ -74,13 +125,20 @@ class PDFCard extends HTMLElement {
           </svg>
         </div>
         ` : ''}
-        <div class="pdf-card__card" tabindex="0" role="button" aria-label="Open ${this.name}">
+        <div class="pdf-card__card" tabindex="0" role="button" aria-label="Open ${safeName}">
           <div class="pdf-card__header">
             <div class="pdf-card__icon">PDF</div>
             <div class="pdf-card__info">
-              <div class="pdf-card__name" title="${this.name}">${this.name}</div>
-              <div class="pdf-card__path" title="${this.path}">${truncatedPath}</div>
+              <div class="pdf-card__name" title="${safeName}">${safeName}</div>
+              ${this.projectName ? `
+              <div class="pdf-card__project" title="${safeProjectName}">${safeProjectName}</div>
+              ` : ''}
+              <div class="pdf-card__path" title="${safePath}">${safeTruncatedPath}</div>
             </div>
+          </div>
+          <div class="pdf-card__context">
+            ${this.venue ? `<span class="pdf-card__context-pill">${safeVenue}</span>` : ''}
+            <span class="pdf-card__context-pill ${dueDateClass}">${safeDueDate}</span>
           </div>
           <div class="pdf-card__meta">
             <div class="pdf-card__meta-item">
@@ -100,8 +158,8 @@ class PDFCard extends HTMLElement {
               <span>${this.annotationCount}</span>
             </div>
             ${this.reviewDecision ? `
-            <div class="pdf-card__review-decision-badge ${this.reviewDecision}" title="Review Decision">
-              ${reviewDecisionLabels[this.reviewDecision] || this.reviewDecision}
+            <div class="pdf-card__review-decision-badge ${safeReviewDecision}" title="Review Decision">
+              ${this.escape(reviewDecisionLabels[this.reviewDecision] || this.reviewDecision)}
             </div>
             ` : ''}
             <div class="pdf-card__meta-item pdf-card__updated-at">
@@ -109,7 +167,7 @@ class PDFCard extends HTMLElement {
             </div>
           </div>
         </div>
-        <button class="pdf-card__delete-btn" title="Remove PDF" aria-label="Remove ${this.name}">
+        <button class="pdf-card__delete-btn" title="Remove PDF" aria-label="Remove ${safeName}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>

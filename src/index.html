@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components/modal.css">
+  <link rel="stylesheet" href="css/components/pdf-card.css">
   <link rel="stylesheet" href="css/home.css">
 </head>
 <body class="home-page">
@@ -67,7 +69,7 @@
 
       <div class="sidebar-section">
         <div class="sidebar-section-title">Papers</div>
-        <div class="sidebar-nav-item sidebar-nav-item--static" role="note" aria-disabled="true">
+        <button class="sidebar-nav-item" data-view="papers" type="button">
           <span class="sidebar-nav-icon" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M7 3H14L19 8V21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -80,22 +82,7 @@
             <span class="sidebar-nav-label">All papers</span>
           </span>
           <span class="sidebar-nav-count" id="count-papers">0</span>
-        </div>
-        <div class="sidebar-nav-item sidebar-nav-item--static" role="note" aria-disabled="true">
-          <span class="sidebar-nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18"/>
-              <path d="M8 6V4h8v2"/>
-              <path d="M6 6l1 14h10l1-14"/>
-              <path d="M10 11v5"/>
-              <path d="M14 11v5"/>
-            </svg>
-          </span>
-          <span class="sidebar-nav-copy">
-            <span class="sidebar-nav-label">Trash</span>
-          </span>
-          <span class="sidebar-nav-count sidebar-nav-count--muted">0</span>
-        </div>
+        </button>
       </div>
 
       <div class="sidebar-footer">

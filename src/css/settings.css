@@ -512,90 +512,6 @@ html[data-theme="dark"] .category-edit-fields select {
   cursor: not-allowed;
 }
 
-.settings-page .modal-overlay {
-  padding: 24px;
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.12) 0%, transparent 34%),
-    rgba(7, 10, 18, 0.42);
-  backdrop-filter: blur(12px);
-}
-
-html[data-theme="light"] .settings-page .modal-overlay {
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.1) 0%, transparent 34%),
-    rgba(241, 245, 249, 0.44);
-}
-
-.modal-settings {
-  width: min(100%, 560px);
-  max-width: 560px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 26px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 250, 252, 0.94) 100%);
-  box-shadow: 0 28px 72px rgba(15, 23, 42, 0.18);
-}
-
-html[data-theme="dark"] .modal-settings {
-  border-color: rgba(71, 85, 105, 0.42);
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.96) 100%);
-}
-
-.settings-page .modal-header {
-  padding: 24px 24px 18px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.settings-page .modal-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.settings-page .modal-kicker {
-  display: inline-flex;
-  width: fit-content;
-  min-height: 28px;
-  align-items: center;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.1);
-  color: var(--color-primary);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.settings-page .modal-title {
-  font-family: sans-serif;
-  font-size: 1.45rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  color: var(--color-text);
-}
-
-.settings-page .modal-body {
-  padding: 18px 24px 24px;
-}
-
-.modal-message {
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-}
-
-.settings-page .modal-footer {
-  padding: 18px 24px 24px;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.settings-page .modal-footer .btn {
-  min-width: 122px;
-  min-height: 44px;
-  border-radius: 14px;
-}
-
 @media (max-width: 900px) {
   .settings-header,
   .settings-body {
@@ -632,20 +548,4 @@ html[data-theme="dark"] .modal-settings {
     flex-wrap: wrap;
   }
 
-  .settings-page .modal-overlay {
-    padding: 14px;
-  }
-
-  .modal-settings {
-    width: 100%;
-    border-radius: 22px;
-  }
-
-  .settings-page .modal-footer {
-    flex-wrap: wrap;
-  }
-
-  .settings-page .modal-footer .btn {
-    flex: 1 1 100%;
-  }
 }

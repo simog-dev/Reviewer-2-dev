@@ -1,4 +1,5 @@
 import '../components/project-card.js';
+import '../components/pdf-card.js';
 import { debounce, formatFileSize } from './utils.js';
 import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import * as pdfjsLib from '../vendor/pdfjs-dist/legacy/build/pdf.min.mjs';
@@ -14,7 +15,9 @@ let allPDFs = [];
 let allProjects = [];
 let allVenues = [];
 let filteredProjects = [];
+let filteredPapers = [];
 let searchQuery = '';
+let dashboardView = 'projects'; // 'projects', 'papers'
 let dashboardFilter = 'all'; // 'all', 'in-progress', 'completed'
 let venueFilter = '';
 let dueDateFilter = '';
@@ -34,6 +37,8 @@ let venueSuggestionsCloseTimer = null;
 const loadingState = document.getElementById('loading-state');
 const emptyState = document.getElementById('empty-state');
 const pdfGrid = document.getElementById('pdf-grid');
+const dashboardTitle = document.querySelector('.dashboard-title');
+const dashboardSubtitle = document.querySelector('.dashboard-subtitle');
 const searchInput = document.getElementById('search-input');
 const dropZone = document.getElementById('drop-zone');
 const btnAddPdf = document.getElementById('btn-add-pdf');
@@ -43,6 +48,7 @@ const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const toastContainer = document.getElementById('toast-container');
 const filtersPopover = document.getElementById('completion-filters');
 const sidebarFilterButtons = Array.from(document.querySelectorAll('.home-sidebar .sidebar-nav-item[data-filter]'));
+const sidebarViewButtons = Array.from(document.querySelectorAll('.home-sidebar .sidebar-nav-item[data-view]'));
 const venueFilterSelect = document.getElementById('venue-filter-select');
 const dueDateFilterInput = document.getElementById('due-date-filter-input');
 const countInProgress = document.getElementById('count-in-progress');
@@ -172,7 +178,7 @@ async function loadPDFs() {
   showLoading();
   try {
     allProjects = await window.api.getAllProjects();
-    allPDFs = allProjects.flatMap(project => project.papers || []);
+    allPDFs = allProjects.flatMap(project => enrichProjectPapers(project));
     filterAndRender();
   } catch (error) {
     console.error('Error loading projects:', error);
@@ -184,6 +190,13 @@ async function loadPDFs() {
 
 // Filter and render PDFs
 function filterAndRender() {
+  updateDashboardCopy();
+
+  if (dashboardView === 'papers') {
+    filterAndRenderPapers();
+    return;
+  }
+
   let filtered = [...allProjects];
 
   if (searchQuery) {
@@ -235,10 +248,62 @@ function filterAndRender() {
   }
 }
 
+function enrichProjectPapers(project) {
+  return (project.papers || []).map(paper => ({
+    ...paper,
+    project_name: project.name,
+    project_conference: project.conference,
+    project_submission_link: project.submission_link
+  }));
+}
+
+function filterAndRenderPapers() {
+  let filtered = [...allPDFs];
+
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter(paper =>
+      paper.name.toLowerCase().includes(query) ||
+      (paper.project_name || '').toLowerCase().includes(query) ||
+      (paper.project_conference || '').toLowerCase().includes(query)
+    );
+  }
+
+  if (venueFilter) {
+    filtered = filtered.filter(paper => getNormalizedVenueName(paper.project_conference) === venueFilter);
+  }
+
+  if (dueDateFilter) {
+    filtered = filtered.filter(paper => {
+      const deadline = getDateOnly(paper.review_deadline);
+      return deadline && deadline <= dueDateFilter;
+    });
+  }
+
+  filteredPapers = filtered;
+
+  hideLoading();
+  updateDashboardStats();
+  updateFilterControlsState();
+
+  if (filteredPapers.length === 0) {
+    if (allPDFs.length === 0) {
+      showEmpty('No papers yet', 'Create a project and add its first paper to start reviewing.');
+    } else if (searchQuery || venueFilter || dueDateFilter) {
+      showEmpty('No papers match your search', 'Try adjusting the search or filters.');
+    } else {
+      showEmpty('No papers yet', 'Create a project and add its first paper to start reviewing.');
+    }
+  } else {
+    renderPapers(filteredPapers);
+  }
+}
+
 // Render project cards
 function renderProjects(projects) {
   emptyState.classList.add('hidden');
   pdfGrid.classList.remove('hidden');
+  pdfGrid.classList.remove('pdf-grid--papers');
 
   pdfGrid.innerHTML = '';
   projects.forEach(project => {
@@ -247,7 +312,11 @@ function renderProjects(projects) {
     pdfGrid.appendChild(card);
   });
 
-  if (allProjects.length > 0) return;
+  const canShowCreateTile = !searchQuery
+    && !venueFilter
+    && !dueDateFilter;
+
+  if (allProjects.length > 0 && !canShowCreateTile) return;
 
   const newProjectTile = document.createElement('button');
   newProjectTile.type = 'button';
@@ -260,11 +329,47 @@ function renderProjects(projects) {
         <line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
     </span>
-    <span class="project-grid-tile__title">New project</span>
+    <span class="project-grid-tile__title">Create Project</span>
     <span class="project-grid-tile__text">Create a project to organize your papers and research notes.</span>
   `;
   newProjectTile.addEventListener('click', handleAddPDF);
   pdfGrid.appendChild(newProjectTile);
+}
+
+function renderPapers(papers) {
+  emptyState.classList.add('hidden');
+  pdfGrid.classList.remove('hidden');
+  pdfGrid.classList.add('pdf-grid--papers');
+
+  pdfGrid.innerHTML = '';
+  papers.forEach(paper => {
+    const card = document.createElement('pdf-card');
+    card.setAttribute('pdf-id', paper.id);
+    card.setAttribute('name', paper.name || 'Untitled');
+    card.setAttribute('path', paper.path || '');
+    card.setAttribute('page-count', String(paper.page_count || 0));
+    card.setAttribute('annotation-count', String(paper.annotation_count || 0));
+    card.setAttribute('updated-at', paper.updated_at || new Date().toISOString());
+    card.setAttribute('completed', String(paper.completed || 0));
+
+    if (paper.review_decision) {
+      card.setAttribute('review-decision', paper.review_decision);
+    }
+
+    if (paper.project_name) {
+      card.setAttribute('project-name', paper.project_name);
+    }
+
+    if (paper.project_conference) {
+      card.setAttribute('venue', paper.project_conference);
+    }
+
+    if (paper.review_deadline) {
+      card.setAttribute('due-date', paper.review_deadline);
+    }
+
+    pdfGrid.appendChild(card);
+  });
 }
 
 // Show/Hide states
@@ -312,7 +417,12 @@ function updateDashboardStats() {
 
 function updateFilterControlsState() {
   sidebarFilterButtons.forEach(button => {
-    const isActive = button.dataset.filter === dashboardFilter;
+    const isActive = dashboardView === 'projects' && button.dataset.filter === dashboardFilter;
+    button.classList.toggle('is-active', isActive);
+  });
+
+  sidebarViewButtons.forEach(button => {
+    const isActive = button.dataset.view === dashboardView;
     button.classList.toggle('is-active', isActive);
   });
 
@@ -329,8 +439,31 @@ function updateFilterControlsState() {
   }
 }
 
+function updateDashboardCopy() {
+  if (!dashboardTitle || !dashboardSubtitle || !searchInput) return;
+
+  if (dashboardView === 'papers') {
+    dashboardTitle.textContent = 'All papers';
+    dashboardSubtitle.textContent = 'Browse every paper across your projects.';
+    searchInput.placeholder = 'Search papers...';
+    return;
+  }
+
+  dashboardTitle.textContent = 'Your projects';
+  dashboardSubtitle.textContent = 'Organize your papers and research notes.';
+  searchInput.placeholder = 'Search projects...';
+}
+
 function setDashboardFilter(filter) {
+  dashboardView = 'projects';
   dashboardFilter = filter;
+  updateFilterControlsState();
+  hideFiltersMenu();
+  filterAndRender();
+}
+
+function setDashboardView(view) {
+  dashboardView = view;
   updateFilterControlsState();
   hideFiltersMenu();
   filterAndRender();
@@ -1219,25 +1352,12 @@ function setupEventListeners() {
   });
 
   // Project card events (delegated)
+  document.addEventListener('pdf-open', async (e) => {
+    await openPaperById(e.detail.id);
+  });
+
   document.addEventListener('project-paper-open', async (e) => {
-    const { id } = e.detail;
-
-    // Get PDF data to check if file exists
-    const pdf = findPaper(id);
-    if (!pdf) {
-      showToast('PDF not found', 'error');
-      return;
-    }
-
-    // Check if file exists before navigating
-    const fileExists = await window.api.checkPDFExists(pdf.path);
-    if (!fileExists) {
-      showPDFNotFoundModal(id, pdf.name, pdf.path);
-      return;
-    }
-
-    // File exists, navigate to review
-    await window.api.navigateToReview(id);
+    await openPaperById(e.detail.id);
   });
 
   document.addEventListener('project-paper-add', async (e) => {
@@ -1275,6 +1395,12 @@ function setupEventListeners() {
       } else {
         handleAddPDF();
       }
+    });
+  });
+
+  sidebarViewButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setDashboardView(btn.dataset.view);
     });
   });
 
@@ -1344,9 +1470,23 @@ function isTypingTarget(target) {
 }
 
 function findPaper(id) {
-  return allProjects
-    .flatMap(project => project.papers || [])
-    .find(paper => paper.id === id);
+  return allPDFs.find(paper => paper.id === id);
+}
+
+async function openPaperById(id) {
+  const pdf = findPaper(id);
+  if (!pdf) {
+    showToast('PDF not found', 'error');
+    return;
+  }
+
+  const fileExists = await window.api.checkPDFExists(pdf.path);
+  if (!fileExists) {
+    showPDFNotFoundModal(id, pdf.name, pdf.path);
+    return;
+  }
+
+  await window.api.navigateToReview(id);
 }
 
 // Initialize on DOM ready
