@@ -136,7 +136,7 @@
         </div>
 
         <div class="toolbar-actions">
-          <button id="btn-project-filters" class="btn btn--secondary btn--toolbar" type="button">
+          <button id="btn-project-filters" class="btn btn--secondary btn--toolbar" type="button" aria-expanded="false" aria-controls="completion-filters">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 5h18l-7 8v5l-4 2v-7z"/>
             </svg>
@@ -161,8 +161,19 @@
         </label>
         <label class="filter-select-shell" for="due-date-filter-input">
           <span class="filter-select-label">Due by</span>
-          <input class="filter-date" id="due-date-filter-input" type="date" aria-label="Filter by projects due by date">
+          <span class="date-input-shell date-input-shell--filter">
+            <input class="filter-date" id="due-date-filter-input" type="date" aria-label="Filter by projects due by date">
+            <span class="date-input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="17" rx="2"/>
+                <path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </span>
+          </span>
         </label>
+        <button class="btn btn--ghost filter-clear-btn" id="clear-project-filters" type="button">
+          Clear all
+        </button>
       </div>
 
       <section class="board-shell drop-zone" id="drop-zone">
@@ -322,7 +333,15 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="paper-deadline-input">Review deadline</label>
-          <input class="input" id="paper-deadline-input" type="date">
+          <div class="date-input-shell">
+            <input class="input" id="paper-deadline-input" type="date">
+            <span class="date-input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="17" rx="2"/>
+                <path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </span>
+          </div>
         </div>
         <div class="project-first-paper modal-inline-card hidden" id="paper-source-file">
           <span class="modal-inline-card__label">Selected file</span>

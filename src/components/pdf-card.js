@@ -1,4 +1,4 @@
-import { formatRelativeTime, formatFileSize } from '../js/utils.js';
+import { formatDate, formatRelativeTime, formatFileSize, getDueDateStatus } from '../js/utils.js';
 
 class PDFCard extends HTMLElement {
   constructor() {
@@ -86,15 +86,6 @@ class PDFCard extends HTMLElement {
       .replace(/'/g, '&#39;');
   }
 
-  formatDueDate(value) {
-    if (!value) return '';
-
-    const [year, month, day] = String(value).slice(0, 10).split('-');
-    if (!year || !month || !day) return String(value);
-
-    return `${day}/${month}/${year}`;
-  }
-
   render() {
     const truncatedPath = this.path.length > 40
       ? '...' + this.path.slice(-37)
@@ -104,8 +95,8 @@ class PDFCard extends HTMLElement {
     const safeTruncatedPath = this.escape(truncatedPath);
     const safeProjectName = this.escape(this.projectName);
     const safeVenue = this.escape(this.venue);
-    const dueDateLabel = this.dueDate ? `Due by ${this.formatDueDate(this.dueDate)}` : 'No due date';
-    const dueDateClass = this.dueDate ? 'pdf-card__context-pill--date' : 'pdf-card__context-pill--muted';
+    const dueDateLabel = this.dueDate ? `Due by ${formatDate(this.dueDate)}` : 'No due date';
+    const dueDateClass = `pdf-card__context-pill--${getDueDateStatus(this.dueDate)}`;
     const safeDueDate = this.escape(dueDateLabel);
     const safeReviewDecision = this.escape(this.reviewDecision);
 

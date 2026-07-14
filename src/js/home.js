@@ -51,6 +51,7 @@ const sidebarFilterButtons = Array.from(document.querySelectorAll('.home-sidebar
 const sidebarViewButtons = Array.from(document.querySelectorAll('.home-sidebar .sidebar-nav-item[data-view]'));
 const venueFilterSelect = document.getElementById('venue-filter-select');
 const dueDateFilterInput = document.getElementById('due-date-filter-input');
+const clearProjectFiltersButton = document.getElementById('clear-project-filters');
 const countInProgress = document.getElementById('count-in-progress');
 const countCompleted = document.getElementById('count-completed');
 const countPapers = document.getElementById('count-papers');
@@ -374,7 +375,6 @@ function renderPapers(papers) {
 
 // Show/Hide states
 function showLoading() {
-  hideFiltersMenu();
   loadingState.classList.remove('hidden');
   emptyState.classList.add('hidden');
   pdfGrid.classList.add('hidden');
@@ -385,7 +385,6 @@ function hideLoading() {
 }
 
 function showEmpty(title = 'No projects yet', text = 'Drag and drop a PDF file here, or click the button below to get started.') {
-  hideFiltersMenu();
   emptyState.classList.remove('hidden');
   pdfGrid.classList.add('hidden');
 
@@ -434,8 +433,8 @@ function updateFilterControlsState() {
     dueDateFilterInput.value = dueDateFilter;
   }
 
-  if (btnProjectFilters) {
-    btnProjectFilters.classList.toggle('active', Boolean(venueFilter) || Boolean(dueDateFilter));
+  if (clearProjectFiltersButton) {
+    clearProjectFiltersButton.disabled = !venueFilter && !dueDateFilter && dashboardFilter === 'all';
   }
 }
 
@@ -458,14 +457,12 @@ function setDashboardFilter(filter) {
   dashboardView = 'projects';
   dashboardFilter = filter;
   updateFilterControlsState();
-  hideFiltersMenu();
   filterAndRender();
 }
 
 function setDashboardView(view) {
   dashboardView = view;
   updateFilterControlsState();
-  hideFiltersMenu();
   filterAndRender();
 }
 
@@ -481,17 +478,25 @@ function setDueDateFilter(value) {
   filterAndRender();
 }
 
-function toggleFiltersMenu(forceOpen) {
-  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : filtersPopover.classList.contains('hidden');
-  if (shouldOpen) {
-    filtersPopover.classList.remove('hidden');
-  } else {
-    hideFiltersMenu();
-  }
+function clearProjectFilters() {
+  dashboardFilter = 'all';
+  venueFilter = '';
+  dueDateFilter = '';
+  updateFilterControlsState();
+  filterAndRender();
 }
 
-function hideFiltersMenu() {
-  filtersPopover.classList.add('hidden');
+function toggleFiltersMenu(forceOpen) {
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : filtersPopover.classList.contains('hidden');
+  setFiltersMenuOpen(shouldOpen);
+}
+
+function setFiltersMenuOpen(isOpen) {
+  if (!filtersPopover || !btnProjectFilters) return;
+
+  filtersPopover.classList.toggle('hidden', !isOpen);
+  btnProjectFilters.classList.toggle('active', isOpen);
+  btnProjectFilters.setAttribute('aria-expanded', String(isOpen));
 }
 
 // Add PDF handler
@@ -1412,14 +1417,8 @@ function setupEventListeners() {
     setDueDateFilter(dueDateFilterInput.value);
   });
 
-  document.addEventListener('click', (event) => {
-    if (!btnProjectFilters || !filtersPopover) return;
-    if (filtersPopover.classList.contains('hidden')) return;
-    const clickedInside = filtersPopover.contains(event.target) || btnProjectFilters.contains(event.target);
-    if (!clickedInside) {
-      hideFiltersMenu();
-    }
-  });
+  clearProjectFiltersButton?.addEventListener('click', clearProjectFilters);
+
 }
 
 // Keyboard shortcuts
@@ -1435,11 +1434,6 @@ function setupKeyboardShortcuts() {
 
     // Escape: Close modal
     if (e.key === 'Escape') {
-      if (!filtersPopover.classList.contains('hidden')) {
-        hideFiltersMenu();
-        return;
-      }
-
       if (pdfNameChangedModal.classList.contains('active')) {
         closePDFNameChangedModal();
       } else if (pdfNotFoundModal.classList.contains('active')) {

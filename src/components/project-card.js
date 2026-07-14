@@ -1,4 +1,4 @@
-import { formatDate, formatRelativeTime } from '../js/utils.js';
+import { formatDate, formatRelativeTime, getDueDateStatus } from '../js/utils.js';
 
 class ProjectCard extends HTMLElement {
   constructor() {
@@ -108,7 +108,7 @@ class ProjectCard extends HTMLElement {
         </div>
 
         <div class="pc-summary">
-        ${project.conference ? `<div class="pc-pill" title="${this.escape(project.conference)}">${this.escape(project.conference)}</div>` : ''}
+        ${project.conference ? `<div class="pc-pill pc-pill--venue" title="${this.escape(project.conference)}">${this.escape(project.conference)}</div>` : ''}
           <span class="pc-pill">${papers.length} paper${papers.length !== 1 ? 's' : ''}</span>
           <span class="pc-pill">${totalAnnotations} note${totalAnnotations !== 1 ? 's' : ''}</span>
         </div>
@@ -160,9 +160,7 @@ class ProjectCard extends HTMLElement {
     const dueLabel = paper.review_deadline
       ? `Due by ${formatDate(paper.review_deadline)}`
       : 'No due date';
-    const dueClass = paper.review_deadline
-      ? 'pdf-card__context-pill--date'
-      : 'pdf-card__context-pill--muted';
+    const dueClass = `pdf-card__context-pill--${getDueDateStatus(paper.review_deadline)}`;
 
     return `
       <div class="pc-paper pdf-card__wrapper" tabindex="0" role="button" data-paper-id="${this.escape(paper.id)}" aria-label="Open ${this.escape(paper.name)}">

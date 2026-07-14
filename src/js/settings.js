@@ -5,6 +5,7 @@ import {
   getDefaultLLMProviderId,
   getLLMProviderDefinition
 } from './llm-config.js';
+import { getCategoryIcon } from './utils.js';
 
 const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt', 'llm_base_url'];
 
@@ -31,6 +32,45 @@ let showingKey = false;
 let allCategories = [];
 let dragSourceIndex = null;
 let pendingRename = null; // { categoryId, name, color, icon }
+
+function getIconOption(iconValue) {
+  return ICON_OPTIONS.find(opt => opt.value === iconValue) || ICON_OPTIONS[0];
+}
+
+function renderIconPicker(selectedIcon) {
+  const selected = getIconOption(selectedIcon);
+
+  return `
+    <div class="category-icon-picker">
+      <input type="hidden" class="edit-icon" value="${selected.value}">
+      <button
+        class="category-icon-picker__trigger"
+        type="button"
+        aria-label="Choose icon: ${escapeHtml(selected.label)}"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        title="${escapeHtml(selected.label)}"
+      >
+        ${getCategoryIcon(selected.value)}
+      </button>
+      <div class="category-icon-picker__menu" role="listbox" aria-label="Annotation label icons">
+        ${ICON_OPTIONS.map(opt => `
+          <button
+            class="category-icon-picker__option ${opt.value === selected.value ? 'is-selected' : ''}"
+            type="button"
+            role="option"
+            aria-selected="${opt.value === selected.value}"
+            aria-label="${escapeHtml(opt.label)}"
+            title="${escapeHtml(opt.label)}"
+            data-icon="${opt.value}"
+          >
+            ${getCategoryIcon(opt.value)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
 
 async function init() {
   await ThemeManager.init();
@@ -136,9 +176,7 @@ function renderCategoryList() {
       <div class="category-edit-fields">
         <input type="color" value="${cat.color}" class="edit-color">
         <input type="text" value="${escapeHtml(cat.name)}" class="edit-name" maxlength="30">
-        <select class="edit-icon">
-          ${ICON_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === cat.icon ? 'selected' : ''}>${opt.label}</option>`).join('')}
-        </select>
+        ${renderIconPicker(cat.icon)}
         <button class="btn btn--icon btn--success-ghost btn-save-edit" title="Save">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
@@ -189,6 +227,42 @@ function renderCategoryList() {
     });
   });
 
+  list.querySelectorAll('.category-icon-picker__trigger').forEach(trigger => {
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const picker = trigger.closest('.category-icon-picker');
+      const row = trigger.closest('.category-row');
+      const isOpen = picker.classList.contains('is-open');
+      closeIconPickers();
+      picker.classList.toggle('is-open', !isOpen);
+      row?.classList.toggle('has-open-icon-picker', !isOpen);
+      trigger.setAttribute('aria-expanded', String(!isOpen));
+    });
+  });
+
+  list.querySelectorAll('.category-icon-picker__option').forEach(option => {
+    option.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const picker = option.closest('.category-icon-picker');
+      const selected = getIconOption(option.dataset.icon);
+      const input = picker.querySelector('.edit-icon');
+      const trigger = picker.querySelector('.category-icon-picker__trigger');
+
+      input.value = selected.value;
+      trigger.innerHTML = getCategoryIcon(selected.value);
+      trigger.title = selected.label;
+      trigger.setAttribute('aria-label', `Choose icon: ${selected.label}`);
+
+      picker.querySelectorAll('.category-icon-picker__option').forEach(item => {
+        const isSelected = item.dataset.icon === selected.value;
+        item.classList.toggle('is-selected', isSelected);
+        item.setAttribute('aria-selected', String(isSelected));
+      });
+
+      closeIconPickers();
+    });
+  });
+
   // Drag-and-drop: only the drag handle is draggable
   list.querySelectorAll('.category-drag-handle').forEach(handle => {
     handle.addEventListener('dragstart', handleDragStart);
@@ -199,6 +273,17 @@ function renderCategoryList() {
     row.addEventListener('dragover', handleDragOver);
     row.addEventListener('dragleave', handleDragLeave);
     row.addEventListener('drop', handleDrop);
+  });
+}
+
+function closeIconPickers() {
+  document.querySelectorAll('.category-icon-picker.is-open').forEach(picker => {
+    picker.classList.remove('is-open');
+    picker.querySelector('.category-icon-picker__trigger')?.setAttribute('aria-expanded', 'false');
+  });
+
+  document.querySelectorAll('.category-row.has-open-icon-picker').forEach(row => {
+    row.classList.remove('has-open-icon-picker');
   });
 }
 
@@ -498,6 +583,8 @@ function setupEventListeners() {
   });
 
   document.getElementById('btn-add-category').addEventListener('click', addCategory);
+
+  document.addEventListener('click', closeIconPickers);
 
   // Rename modal
   document.getElementById('rename-modal-close').addEventListener('click', hideRenameModal);
