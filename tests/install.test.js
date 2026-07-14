@@ -10,6 +10,19 @@ const { execFileSync, spawn } = require('child_process');
 const ROOT_DIR = path.join(__dirname, '..');
 const NODE_MODULES = path.join(ROOT_DIR, 'node_modules');
 let nativeRuntimeInfo;
+const NATIVE_RUNTIME_MARKER = 'NATIVE_RUNTIME_INFO:';
+
+function parseNativeRuntimeInfo(output) {
+  const runtimeLine = String(output)
+    .split(/\r?\n/)
+    .find(line => line.startsWith(NATIVE_RUNTIME_MARKER));
+
+  if (!runtimeLine) {
+    throw new Error('Electron native runtime did not return its information marker');
+  }
+
+  return JSON.parse(runtimeLine.slice(NATIVE_RUNTIME_MARKER.length));
+}
 
 class TestRunner {
   constructor() {
@@ -121,6 +134,17 @@ async function runInstallationTests() {
     runner.assert(hasBindings, 'better-sqlite3 native bindings not found');
   });
 
+  runner.test('native runtime parser ignores Electron download output', () => {
+    const output = [
+      'Downloading Electron binary...',
+      `${NATIVE_RUNTIME_MARKER}{"electron":"42.5.0","sqlite":"3.50.4"}`
+    ].join('\n');
+    const info = parseNativeRuntimeInfo(output);
+
+    runner.assertEqual(info.electron, '42.5.0', 'Unexpected parsed Electron version');
+    runner.assertEqual(info.sqlite, '3.50.4', 'Unexpected parsed SQLite version');
+  });
+
   runner.test('better-sqlite3 works with Electron native ABI', () => {
     const probeScript = path.join(__dirname, 'native', 'better-sqlite3.test.js');
     const electronRunner = path.join(__dirname, 'run-with-electron.js');
@@ -132,7 +156,7 @@ async function runInstallationTests() {
         stdio: 'pipe',
         timeout: 30000
       });
-      nativeRuntimeInfo = JSON.parse(output.trim());
+      nativeRuntimeInfo = parseNativeRuntimeInfo(output);
     } catch (error) {
       const details = error.stderr?.toString().trim() || error.message;
       throw new Error(`Cannot use better-sqlite3 with Electron: ${details}`);

@@ -13,12 +13,12 @@ try {
     throw new Error('SQLite did not return its version');
   }
 
-  console.log(JSON.stringify({
+  console.log(`NATIVE_RUNTIME_INFO:${JSON.stringify({
     electron: process.versions.electron,
     node: process.versions.node,
     modules: process.versions.modules,
     sqlite: result.version
-  }));
+  })}`);
 } finally {
   db.close();
 }
