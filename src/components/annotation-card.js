@@ -58,26 +58,6 @@ class AnnotationCard extends HTMLElement {
     return this.getAttribute('highlight-rects') || '[]';
   }
 
-  getCategoryContrastColor() {
-    const hex = this.categoryColor.replace('#', '');
-    if (![3, 6].includes(hex.length) || !/^[0-9a-f]+$/i.test(hex)) {
-      return '#ffffff';
-    }
-
-    const normalized = hex.length === 3
-      ? hex.split('').map(value => value + value).join('')
-      : hex;
-    const channels = [0, 2, 4].map(index => parseInt(normalized.slice(index, index + 2), 16) / 255);
-    const luminance = channels.reduce((total, channel, index) => {
-      const linear = channel <= 0.03928
-        ? channel / 12.92
-        : ((channel + 0.055) / 1.055) ** 2.4;
-      return total + linear * [0.2126, 0.7152, 0.0722][index];
-    }, 0);
-
-    return luminance > 0.42 ? '#171717' : '#ffffff';
-  }
-
   /**
    * Format selected text to show start and end
    * @param {string} text - The full selected text
@@ -134,7 +114,7 @@ class AnnotationCard extends HTMLElement {
 
     this.innerHTML = `
       <div class="annotation-card__card"
-           style="--annotation-category-color: ${this.categoryColor}; --annotation-category-contrast-color: ${this.getCategoryContrastColor()};"
+           style="--annotation-category-color: ${this.categoryColor};"
            tabindex="0"
            role="button"
            aria-label="View annotation on page ${this.pageNumber}">

@@ -635,6 +635,20 @@ category-filter {
   color: var(--category-filter-color);
 }
 
+html[data-theme="light"] .category-filter-chip,
+html[data-theme="light"] .category-filter-chip:hover,
+html[data-theme="light"] .category-filter-chip.active,
+html[data-theme="light"] .category-filter-chip.active:hover {
+  color: #000;
+}
+
+html[data-theme="dark"] .category-filter-chip,
+html[data-theme="dark"] .category-filter-chip:hover,
+html[data-theme="dark"] .category-filter-chip.active,
+html[data-theme="dark"] .category-filter-chip.active:hover {
+  color: #fff;
+}
+
 .category-filter-chip svg {
   width: 12px;
   height: 12px;
@@ -709,6 +723,17 @@ annotation-card {
   border-left-color: var(--annotation-category-color);
 }
 
+html[data-theme="dark"] .annotation-card__card {
+  background-color: #303030;
+  border-color: #505050;
+}
+
+html[data-theme="dark"] .annotation-card__card:hover {
+  background-color: #3a3a3a;
+  border-color: #646464;
+  border-left-color: var(--annotation-category-color);
+}
+
 .annotation-card__card:focus {
   outline: 2px solid var(--color-primary, #3b82f6);
   outline-offset: 2px;
@@ -733,9 +758,13 @@ annotation-card {
   padding: 2px 8px;
   border-radius: var(--radius-full, 9999px);
   background-color: var(--annotation-category-color);
-  color: var(--annotation-category-contrast-color);
+  color: #000;
   font-size: 0.6875rem;
   font-weight: 500;
+}
+
+html[data-theme="dark"] .annotation-card__category-badge {
+  color: #fff;
 }
 
 .annotation-card__category-badge svg {
@@ -1402,7 +1431,17 @@ annotation-card {
   border-radius: var(--radius-full);
   font-size: 0.8125rem;
   font-weight: 500;
-  color: white;
+  color: #000;
+}
+
+.annotation-modal .category-badge svg {
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+
+html[data-theme="dark"] .annotation-modal .category-badge {
+  color: #fff;
 }
 
 .annotation-modal .comment-textarea {
@@ -2022,6 +2061,13 @@ html[data-theme="dark"] .review-page .webview-url-bar {
   background: var(--review-control-background);
   border-color: var(--review-control-border);
   box-shadow: var(--review-control-shadow);
+}
+
+html[data-theme="dark"] .review-page .annotation-panel-footer .btn--secondary,
+html[data-theme="dark"] .review-page .review-panel-footer .btn--secondary {
+  background: #303030;
+  border-color: #505050;
+  color: var(--color-text);
 }
 
 .review-page .btn-back {

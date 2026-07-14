@@ -802,6 +802,14 @@ function hideSelectionPopup() {
   }
 }
 
+function updateCategoryBadge(category) {
+  categoryBadge.replaceChildren();
+  categoryBadge.insertAdjacentHTML('afterbegin', getCategoryIcon(category.icon));
+  categoryBadge.append(document.createTextNode(category.name));
+  categoryBadge.style.backgroundColor = category.color;
+  categoryBadge.style.removeProperty('color');
+}
+
 function showFreeNoteModal() {
   resetDraggableModal(annotationModal);
   modalTitle.textContent = 'Add Note';
@@ -811,8 +819,7 @@ function showFreeNoteModal() {
 
   // Set first category
   const firstCategory = activeCategories[0];
-  categoryBadge.textContent = firstCategory.name;
-  categoryBadge.style.backgroundColor = firstCategory.color;
+  updateCategoryBadge(firstCategory);
   categorySelect.value = firstCategory.id;
 
   commentInput.value = '';
@@ -851,8 +858,7 @@ function showAnnotationModal(categoryId) {
     selectedTextPreview.textContent = pendingSelection.selectedText;
   }
 
-  categoryBadge.textContent = category.name;
-  categoryBadge.style.backgroundColor = category.color;
+  updateCategoryBadge(category);
   categorySelect.value = categoryId;
   commentInput.value = '';
 
@@ -2252,8 +2258,7 @@ function setupEventListeners() {
   categorySelect.addEventListener('change', () => {
     const category = categories.find(c => c.id === parseInt(categorySelect.value, 10));
     if (category) {
-      categoryBadge.textContent = category.name;
-      categoryBadge.style.backgroundColor = category.color;
+      updateCategoryBadge(category);
     }
   });
 

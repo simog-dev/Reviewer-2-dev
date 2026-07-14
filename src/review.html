@@ -73,11 +73,10 @@
 
         <!-- Thumbnail Sidebar Toggle -->
         <button class="btn btn--tool btn-thumbnails" id="btn-thumbnails" title="Page Thumbnails (T)" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="4" y="3" width="6" height="8" rx="1"/>
-            <rect x="14" y="3" width="6" height="8" rx="1"/>
-            <rect x="4" y="13" width="6" height="8" rx="1"/>
-            <rect x="14" y="13" width="6" height="8" rx="1"/>
+          <svg viewBox="0 0 512 512" fill="none" role="img" aria-label="Documenti sovrapposti">
+            <path d="M128 368H96V48H320V80" stroke="currentColor" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M320 144H192V464H416V240L320 144Z" stroke="currentColor" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M320 144V240H416" stroke="currentColor" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
 
@@ -687,11 +686,11 @@
       <div class="modal-body">
         <div class="modal-message-card modal-message-card--danger">
           <div class="modal-message-card__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
+            <svg class="delete-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="11"></circle>
+                <path d="M12 7v7"></path>
+                <circle cx="11.9" cy="18" r="0.8"></circle>
+              </svg>
           </div>
           <div class="modal-message-card__copy">
             <p class="modal-message-card__title">Delete this annotation permanently?</p>

@@ -30,6 +30,11 @@ html[data-theme="light"] .modal-overlay {
   visibility: visible;
 }
 
+#annotation-modal {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .modal {
   width: min(100%, 560px);
   max-width: 560px;
