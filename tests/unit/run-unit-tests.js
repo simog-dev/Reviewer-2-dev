@@ -23,7 +23,12 @@ async function runAllUnitTests() {
     { name: 'Database', file: './database.test.js', runner: 'runDatabaseTests' },
     { name: 'Utils', file: './utils.test.js', runner: 'runUtilsTests' },
     { name: 'Reference Parser', file: './reference-parser.test.js', runner: 'runReferenceParserTests' },
-    { name: 'Update Manager', file: './update-manager.test.js', runner: 'runUpdateManagerTests' }
+    { name: 'Update Manager', file: './update-manager.test.js', runner: 'runUpdateManagerTests' },
+    {
+      name: 'Electron E2E Launch Arguments',
+      file: './electron-launch-args.test.js',
+      runner: 'runElectronLaunchArgsTests'
+    }
   ];
 
   for (const suite of suites) {

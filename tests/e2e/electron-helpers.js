@@ -5,6 +5,7 @@
 
 const { _electron: electron } = require('playwright');
 const path = require('path');
+const { getElectronLaunchArgs } = require('./electron-launch-args');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const TEST_PDF_PATH = path.join(__dirname, '..', 'fixtures', 'test-document.pdf');
@@ -17,7 +18,7 @@ const TEST_USER_DATA_PATH = path.join(__dirname, '..', 'fixtures', 'test-user-da
  */
 async function launchApp(options = {}) {
   const app = await electron.launch({
-    args: [ROOT_DIR],
+    args: getElectronLaunchArgs(ROOT_DIR),
     env: {
       ...process.env,
       NODE_ENV: 'test',
