@@ -168,10 +168,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
-        run: gh release upload "$TAG_NAME" dist/* --clobber
+        run: gh release upload "$TAG_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Publish completed release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
-        run: gh release edit "$TAG_NAME" --draft=false --latest
+        run: gh release edit "$TAG_NAME" --draft=false --latest --repo "$GITHUB_REPOSITORY"
