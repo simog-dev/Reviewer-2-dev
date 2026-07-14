@@ -21,7 +21,7 @@
     "postinstall": "node scripts/vendor-assets.js && electron-builder install-app-deps || true",
     "test": "node tests/run-all-tests.js",
     "test:install": "node tests/install.test.js",
-    "test:unit": "node tests/unit/run-unit-tests.js",
+    "test:unit": "node tests/run-with-electron.js tests/unit/run-unit-tests.js",
     "test:e2e": "npx playwright test --config playwright.config.js",
     "test:e2e:headed": "npx playwright test --config playwright.config.js --headed",
     "test:report": "node tests/generate-report.js",

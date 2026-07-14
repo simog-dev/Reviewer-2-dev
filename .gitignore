@@ -5,7 +5,10 @@ node_modules/
 dist/
 
 # Test outputs
-tests/
+tests/*-test-results.json
+tests/test-report.html
+tests/e2e-report/
+tests/e2e-results/
 
 # IDE
 .idea/
