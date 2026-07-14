@@ -22,5 +22,9 @@ module.exports = async function globalTeardown() {
     }
   }
 
+
+  const testUserDataPath = path.join(fixturesDir, 'test-user-data');
+  fs.rmSync(testUserDataPath, { recursive: true, force: true });
+
   console.log('Teardown complete.\n');
 };

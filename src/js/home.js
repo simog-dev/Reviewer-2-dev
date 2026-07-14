@@ -4,6 +4,7 @@ import { debounce, formatFileSize } from './utils.js';
 import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import * as pdfjsLib from '../vendor/pdfjs-dist/legacy/build/pdf.min.mjs';
 import ThemeManager from './theme-manager.js';
+import { initUpdateController } from './update-controller.js';
 
 // Initialize PDF.js worker
 const workerSrc = new URL('../vendor/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).href;
@@ -111,6 +112,7 @@ const pdfNameChangedConfirm = document.getElementById('pdf-name-changed-confirm'
 // Initialize
 async function init() {
   await ThemeManager.init();
+  await initUpdateController();
   setupThemeToggle();
   setupDraggableModals([
     projectModal,

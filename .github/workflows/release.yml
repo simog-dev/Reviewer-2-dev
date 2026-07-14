@@ -1,181 +1,177 @@
-name: Build and Release
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*'  # Trigger on version tags like v1.0.0, v1.0.1, etc.
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_as:
+        description: "Version to prepare, without v (example: 1.2.0)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_sha: ${{ steps.release.outputs.sha }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Create or update the release pull request
+        id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          release-as: ${{ inputs.release_as }}
 
-      - name: Setup Node.js
+  test:
+    name: Test release candidate
+    if: needs.prepare.outputs.release_created == 'true'
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild native modules
-        run: npm run rebuild
+      - name: Run test suite
+        run: xvfb-run -a npm test
 
-      - name: Decode Windows certificate
-        if: env.WIN_CSC_LINK != ''
-        shell: powershell
-        run: |
-          $certBytes = [Convert]::FromBase64String($env:WIN_CSC_LINK)
-          [IO.File]::WriteAllBytes("$env:GITHUB_WORKSPACE\build\certs\certificate.pfx", $certBytes)
-        env:
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+  build-windows:
+    name: Build Windows x64
+    if: needs.prepare.outputs.release_created == 'true'
+    needs: [prepare, test]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
 
-      - name: Build Windows installer
-        run: npm run build:win
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installer
+        run: npm run build:win -- --publish never
         env:
-          CSC_LINK: ${{ github.workspace }}\build\certs\certificate.pfx
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows release files
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
+          name: release-windows
+          if-no-files-found: error
+          retention-days: 7
           path: |
             dist/*.exe
+            dist/*.exe.blockmap
             dist/latest.yml
-          retention-days: 5
 
   build-macos:
-    name: Build macOS
+    name: Build macOS universal
+    if: needs.prepare.outputs.release_created == 'true'
+    needs: [prepare, test]
     runs-on: macos-latest
-
+    env:
+      MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+      MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
-      - name: Checkout code
+      - name: Checkout released commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild native modules
-        run: npm run rebuild
-
-      - name: Decode macOS certificate
-        if: env.MAC_CSC_LINK != ''
-        run: |
-          echo "$MAC_CSC_LINK" | base64 --decode > $GITHUB_WORKSPACE/build/certs/certificate.p12
+      - name: Build unsigned app
+        if: env.MAC_CSC_LINK == '' || env.APPLE_ID == '' || env.APPLE_APP_SPECIFIC_PASSWORD == '' || env.APPLE_TEAM_ID == ''
+        run: npm run build:mac -- --universal --publish never --config.mac.hardenedRuntime=false --config.mac.notarize=false
         env:
-          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - name: Build macOS installer
-        run: npm run build:mac
+      - name: Build, sign and notarize app
+        if: env.MAC_CSC_LINK != '' && env.APPLE_ID != '' && env.APPLE_APP_SPECIFIC_PASSWORD != '' && env.APPLE_TEAM_ID != ''
+        run: npm run build:mac -- --universal --publish never --config.mac.notarize=true
         env:
-          CSC_LINK: ${{ github.workspace }}/build/certs/certificate.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ env.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ env.MAC_CSC_KEY_PASSWORD }}
 
-      - name: Upload macOS artifacts
+      - name: Upload macOS release files
         uses: actions/upload-artifact@v4
         with:
-          name: macos-installer
+          name: release-macos
+          if-no-files-found: error
+          retention-days: 7
           path: |
             dist/*.dmg
+            dist/*.dmg.blockmap
             dist/*.zip
+            dist/*.zip.blockmap
             dist/latest-mac.yml
-          retention-days: 5
 
-  create-release:
-    name: Create GitHub Release
-    needs: [build-windows, build-macos]
+  publish:
+    name: Publish GitHub release
+    if: needs.prepare.outputs.release_created == 'true'
+    needs: [prepare, build-windows, build-macos]
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for changelog generation
-
-      - name: Download Windows artifacts
+      - name: Download release files
         uses: actions/download-artifact@v4
         with:
-          name: windows-installer
-          path: dist/
+          pattern: release-*
+          path: dist
+          merge-multiple: true
 
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-installer
-          path: dist/
+      - name: Generate SHA-256 checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Get previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || echo "")
-
-          # Generate changelog from commits
-          if [ -z "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
-          else
-            CHANGELOG=$(git log $PREVIOUS_TAG..${{ github.ref }} --pretty=format:"- %s (%h)" --no-merges)
-          fi
-
-          # Escape for GitHub Actions
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
-
-          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          body: |
-            ## Changes
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ---
-
-            ## Installation Instructions
-
-            ### Windows
-            1. Download `Reviewer-2-Setup-*.exe`
-            2. Run the installer
-            3. **Note:** You may see a "Windows protected your PC" warning (SmartScreen). Click "More info" → "Run anyway"
-            4. Follow the installation wizard
-
-            ### macOS
-            1. Download `Reviewer-2-*.dmg`
-            2. Open the DMG and drag the app to Applications
-            3. **Note:** First launch requires right-click → Open (or run `xattr -cr "/Applications/Reviewer 2.app"` in Terminal)
-            4. For subsequent launches, double-click normally
-
-            ### Auto-Update
-            - **Windows:** Auto-update is fully supported. The app will check for updates on launch.
-            - **macOS:** Due to lack of Apple notarization (requires paid Apple Developer account), auto-update is not available. Download new versions manually from this page.
-
-            ## Checksums
-
-            See attached files for SHA256 checksums.
-          files: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.zip
-            dist/*.yml
+      - name: Attach files to draft release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: gh release upload "$TAG_NAME" dist/* --clobber
+
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: gh release edit "$TAG_NAME" --draft=false --latest

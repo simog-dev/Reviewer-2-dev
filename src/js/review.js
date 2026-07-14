@@ -8,6 +8,7 @@ import { createLLMProvider } from './llm-provider.js';
 import { DEFAULT_PROMPT } from './llm-config.js';
 import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import ThemeManager from './theme-manager.js';
+import { initUpdateController } from './update-controller.js';
 
 // State
 let pdfId = null;
@@ -149,6 +150,7 @@ const scheduleReviewSnapshot = debounce(() => {
 async function init() {
   // Initialize theme
   await ThemeManager.init();
+  await initUpdateController();
   setupThemeToggle();
   setupDraggableModals([
     annotationModal,

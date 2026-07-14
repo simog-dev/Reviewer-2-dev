@@ -6,6 +6,7 @@ import {
   getLLMProviderDefinition
 } from './llm-config.js';
 import { getCategoryIcon } from './utils.js';
+import { initUpdateController } from './update-controller.js';
 
 const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt', 'llm_base_url', 'llm_review_style_example'];
 
@@ -74,9 +75,16 @@ function renderIconPicker(selectedIcon) {
 
 async function init() {
   await ThemeManager.init();
+  await initUpdateController();
   setupEventListeners();
   await loadSettings();
   await loadCategories();
+  await loadApplicationInfo();
+}
+
+async function loadApplicationInfo() {
+  const version = await window.api.getAppVersion();
+  document.getElementById('app-version').textContent = `Version ${version}`;
 }
 
 async function loadSettings() {
@@ -568,6 +576,15 @@ function setupEventListeners() {
   });
 
   document.getElementById('btn-save').addEventListener('click', saveSettings);
+
+  const checkUpdatesButton = document.getElementById('btn-check-updates');
+  checkUpdatesButton.addEventListener('click', async () => {
+    checkUpdatesButton.disabled = true;
+    checkUpdatesButton.textContent = 'Checking…';
+    await window.api.checkForUpdates();
+    checkUpdatesButton.disabled = false;
+    checkUpdatesButton.textContent = 'Check for updates';
+  });
 
   document.getElementById('btn-toggle-key').addEventListener('click', toggleKeyVisibility);
 

@@ -22,7 +22,8 @@ async function runAllUnitTests() {
   const suites = [
     { name: 'Database', file: './database.test.js', runner: 'runDatabaseTests' },
     { name: 'Utils', file: './utils.test.js', runner: 'runUtilsTests' },
-    { name: 'Reference Parser', file: './reference-parser.test.js', runner: 'runReferenceParserTests' }
+    { name: 'Reference Parser', file: './reference-parser.test.js', runner: 'runReferenceParserTests' },
+    { name: 'Update Manager', file: './update-manager.test.js', runner: 'runUpdateManagerTests' }
   ];
 
   for (const suite of suites) {

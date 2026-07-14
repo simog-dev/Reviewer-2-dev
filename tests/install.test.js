@@ -226,8 +226,7 @@ async function runInstallationTests() {
     'src/js',
     'src/components',
     'src/database',
-    'assets',
-    'assets/icons'
+    'src/logo'
   ];
 
   for (const dir of directories) {

@@ -58,3 +58,6 @@ build/certs/
 # macOS keychain files
 *.keychain
 *.keychain-db
+
+#Internal Documentation
+docs/

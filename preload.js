@@ -70,10 +70,14 @@ contextBridge.exposeInMainWorld('api', {
   navigateToSettings: () => ipcRenderer.invoke('navigate:settings'),
 
   // Auto-updater
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getUpdateStatus: () => ipcRenderer.invoke('updater:get-status'),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
-  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, info) => callback(info)),
-  onUpdateDownloadProgress: (callback) => ipcRenderer.on('update-download-progress', (event, progress) => callback(progress)),
-  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info))
+  onUpdateStatus: (callback) => {
+    const handler = (event, status) => callback(status);
+    ipcRenderer.on('updater:status', handler);
+    return () => ipcRenderer.removeListener('updater:status', handler);
+  }
 });

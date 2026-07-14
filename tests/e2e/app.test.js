@@ -19,11 +19,13 @@ test.describe('PDF Reviewer Application', () => {
 
   test.describe('1. Application Launch', () => {
 
-    test('Application launches successfully', async () => {
+    test.beforeAll(async () => {
       const result = await launchApp();
       app = result.app;
       window = result.window;
+    });
 
+    test('Application launches successfully', async () => {
       expect(app).toBeTruthy();
       expect(window).toBeTruthy();
 
@@ -32,10 +34,10 @@ test.describe('PDF Reviewer Application', () => {
 
     test('Home page loads correctly', async () => {
       const title = await window.title();
-      expect(title).toBe('PDF Reviewer');
+      expect(title).toBe('Reviewer 2');
 
       // Check main elements exist
-      const header = await window.$('.home-header');
+      const header = await window.$('.dashboard-hero');
       expect(header).toBeTruthy();
 
       const addButton = await window.$('#btn-add-pdf');
@@ -131,6 +133,22 @@ test.describe('PDF Reviewer Application', () => {
       expect(api).toBe(true);
     });
 
+    test('Settings shows the app version and update controls', async () => {
+      await Promise.all([
+        window.waitForURL(/settings\.html/),
+        window.evaluate(() => window.api.navigateToSettings())
+      ]);
+
+      await expect(window.locator('#app-version')).toHaveText('Version 1.0.1');
+      await window.locator('#btn-check-updates').click();
+      await expect(window.locator('.update-notice__title')).toHaveText('Update check unavailable');
+
+      await Promise.all([
+        window.waitForURL(/index\.html/),
+        window.evaluate(() => window.api.navigateToHome())
+      ]);
+    });
+
     test.afterAll(async () => {
       await closeApp(app);
     });
@@ -217,6 +235,26 @@ test.describe('PDF Reviewer Application', () => {
 
       expect(operations.getSetting).toBe(true);
       expect(operations.setSetting).toBe(true);
+    });
+
+    test('Update operations are available and disabled in development', async () => {
+      const status = await window.evaluate(async () => {
+        const operations = {
+          getAppVersion: typeof window.api.getAppVersion === 'function',
+          getUpdateStatus: typeof window.api.getUpdateStatus === 'function',
+          checkForUpdates: typeof window.api.checkForUpdates === 'function',
+          downloadUpdate: typeof window.api.downloadUpdate === 'function',
+          installUpdate: typeof window.api.installUpdate === 'function',
+          onUpdateStatus: typeof window.api.onUpdateStatus === 'function'
+        };
+        const checkResult = await window.api.checkForUpdates();
+        return { operations, checkResult };
+      });
+
+      for (const available of Object.values(status.operations)) {
+        expect(available).toBe(true);
+      }
+      expect(status.checkResult.status).toBe('disabled');
     });
 
     test('Export operations are available', async () => {

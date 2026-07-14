@@ -667,6 +667,22 @@ html[data-theme="dark"] .category-icon-picker__menu {
   cursor: not-allowed;
 }
 
+.settings-section--application {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.settings-section--application .settings-section-head,
+.settings-section--application .settings-actions {
+  margin: 0;
+}
+
+.settings-actions--start {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 900px) {
   .settings-header,
   .settings-body {
@@ -701,6 +717,11 @@ html[data-theme="dark"] .category-icon-picker__menu {
   .category-row,
   .category-edit-fields {
     flex-wrap: wrap;
+  }
+
+  .settings-section--application {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
 }

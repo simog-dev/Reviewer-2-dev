@@ -8,6 +8,7 @@ const path = require('path');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const TEST_PDF_PATH = path.join(__dirname, '..', 'fixtures', 'test-document.pdf');
+const TEST_USER_DATA_PATH = path.join(__dirname, '..', 'fixtures', 'test-user-data');
 
 /**
  * Launch the Electron application
@@ -20,7 +21,8 @@ async function launchApp(options = {}) {
     env: {
       ...process.env,
       NODE_ENV: 'test',
-      TEST_MODE: 'true'
+      TEST_MODE: 'true',
+      E2E_USER_DATA_PATH: TEST_USER_DATA_PATH
     },
     ...options
   });

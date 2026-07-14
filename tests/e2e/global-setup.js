@@ -29,6 +29,9 @@ module.exports = async function globalSetup() {
     fs.unlinkSync(testDbPath);
   }
 
+  const testUserDataPath = path.join(fixturesDir, 'test-user-data');
+  fs.rmSync(testUserDataPath, { recursive: true, force: true });
+
   // Create test output directory
   const outputDir = path.join(__dirname, '..', 'e2e-results');
   if (!fs.existsSync(outputDir)) {

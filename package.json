@@ -29,6 +29,9 @@
   },
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "electron-updater": "^6.8.9",
@@ -53,7 +56,6 @@
       "main.js",
       "preload.js",
       "src/**/*",
-      "assets/**/*",
       "!**/.DS_Store",
       "!src/logo/icon.iconset/**/*"
     ],
@@ -63,13 +65,12 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "YOUR_GITHUB_USERNAME",
-      "repo": "reviewer",
       "releaseType": "release"
     },
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "src/logo/icon.png",
+      "icon": "src/logo/icon.icns",
+      "artifactName": "Reviewer-2-${version}-${arch}.${ext}",
       "target": [
         "dmg",
         "zip"
@@ -81,16 +82,11 @@
     },
     "win": {
       "icon": "src/logo/icon.ico",
+      "artifactName": "Reviewer-2-Setup-${version}-${arch}.${ext}",
       "target": {
         "target": "nsis",
         "arch": [
           "x64"
-        ]
-      },
-      "signtoolOptions": {
-        "certificateSubjectName": "Reviewer2",
-        "signingHashAlgorithms": [
-          "sha256"
         ]
       }
     },
