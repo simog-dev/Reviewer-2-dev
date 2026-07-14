@@ -1,0 +1,55 @@
+name: Prepare release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_as:
+        description: "Version to prepare, without v (example: 1.2.0)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Create or update release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release state
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect a release pull request merge
+        id: release-merge
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
+          elif [[ -z "$BEFORE_SHA" || "$BEFORE_SHA" =~ ^0+$ ]]; then
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BEFORE_SHA" "$GITHUB_SHA" -- .release-please-manifest.json; then
+            echo "prepare=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prepare=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare release pull request only
+        if: steps.release-merge.outputs.prepare == 'true'
+        uses: googleapis/release-please-action@v5
+        with:
+          target-branch: main
+          skip-github-release: true
+          release-as: ${{ inputs.release_as }}
