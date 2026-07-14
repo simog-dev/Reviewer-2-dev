@@ -1,6 +1,6 @@
 {
   "name": "reviewer-2",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Professional peer review application for scholarly documents",
   "main": "main.js",
   "scripts": {
