@@ -7,7 +7,7 @@ import {
 } from './llm-config.js';
 import { getCategoryIcon } from './utils.js';
 
-const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt', 'llm_base_url'];
+const SETTING_KEYS = ['llm_api_key', 'llm_provider', 'llm_model', 'llm_temperature', 'llm_prompt', 'llm_base_url', 'llm_review_style_example'];
 
 const ICON_OPTIONS = [
   { value: 'label', label: 'Label' },
@@ -88,6 +88,7 @@ async function loadSettings() {
   const temperature = await window.api.getSetting('llm_temperature') || '0.7';
   const prompt = await window.api.getSetting('llm_prompt') || DEFAULT_PROMPT;
   const baseUrl = await window.api.getSetting('llm_base_url') || providerDefinition.defaultBaseUrl || '';
+  const reviewStyleExample = await window.api.getSetting('llm_review_style_example') || '';
 
   renderProviderOptions(provider);
 
@@ -102,6 +103,7 @@ async function loadSettings() {
   document.getElementById('temperature-value').textContent = parseFloat(temperature).toFixed(1);
 
   document.getElementById('prompt-input').value = prompt;
+  document.getElementById('review-style-example-input').value = reviewStyleExample;
 }
 
 function renderProviderOptions(selectedProviderId) {
@@ -536,6 +538,7 @@ async function saveSettings() {
   const baseUrl = document.getElementById('base-url-input').value.trim();
   const temperature = document.getElementById('temperature-slider').value;
   const prompt = document.getElementById('prompt-input').value;
+  const reviewStyleExample = document.getElementById('review-style-example-input').value.trim();
 
   await window.api.setSetting('llm_api_key', apiKey);
   await window.api.setSetting('llm_provider', provider);
@@ -543,6 +546,7 @@ async function saveSettings() {
   await window.api.setSetting('llm_base_url', baseUrl);
   await window.api.setSetting('llm_temperature', temperature);
   await window.api.setSetting('llm_prompt', prompt);
+  await window.api.setSetting('llm_review_style_example', reviewStyleExample);
 
   showToast('Settings saved successfully');
 }

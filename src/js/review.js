@@ -5,6 +5,7 @@ import { AnnotationManager } from './annotation-manager.js';
 import { ResizablePanels } from './resizable-panels.js';
 import { getCategoryIcon, escapeHtml, debounce, formatRelativeTime } from './utils.js';
 import { createLLMProvider } from './llm-provider.js';
+import { DEFAULT_PROMPT } from './llm-config.js';
 import { resetDraggableModal, setupDraggableModals } from './draggable-modals.js';
 import ThemeManager from './theme-manager.js';
 
@@ -1457,6 +1458,22 @@ async function checkLLMReady() {
 }
 
 // Generate review using LLM
+function buildReviewPrompt(basePrompt, reviewStyleExample) {
+  const normalizedPrompt = (basePrompt || DEFAULT_PROMPT).trim();
+  const normalizedExample = (reviewStyleExample || '').trim();
+
+  if (!normalizedExample) {
+    return normalizedPrompt || undefined;
+  }
+
+  return `${normalizedPrompt}
+
+Review style example:
+Use the following review only as a reference for tone, structure, level of detail, and writing style. Do not copy its content, claims, paper-specific details, or recommendations.
+
+${normalizedExample}`;
+}
+
 async function generateReview() {
   const annotations = annotationManager.annotations;
   if (annotations.length === 0) {
@@ -1476,7 +1493,9 @@ async function generateReview() {
     const model = await window.api.getSetting('llm_model') || '';
     const baseUrl = await window.api.getSetting('llm_base_url') || '';
     const temperature = parseFloat(await window.api.getSetting('llm_temperature') || '0.7');
-    const prompt = await window.api.getSetting('llm_prompt') || undefined;
+    const basePrompt = await window.api.getSetting('llm_prompt') || undefined;
+    const reviewStyleExample = await window.api.getSetting('llm_review_style_example') || '';
+    const prompt = buildReviewPrompt(basePrompt, reviewStyleExample);
 
     const llmProvider = createLLMProvider(provider, { apiKey, model, baseUrl, temperature, prompt });
     const reviewText = await llmProvider.generateReview(annotations, pdfData.name);

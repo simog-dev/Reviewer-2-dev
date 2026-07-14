@@ -52,11 +52,29 @@
           <div class="settings-section-head">
             <div class="settings-section-kicker">AI</div>
             <div class="settings-section-title">AI Review Generation</div>
-            <p class="settings-section-text">Choose the provider settings and define the prompt used to generate final review drafts.</p>
+            <p class="settings-section-text">Choose the AI provider and guide generated reviews with an example of your writing style.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="provider-select">Provider</label>
+            <select class="select" id="provider-select"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="model-input">Model</label>
+            <span class="form-hint" id="model-hint"></span>
+            <input type="text" class="input" id="model-input" placeholder="Enter the model ID...">
+          </div>
+
+          <div class="form-group" id="base-url-group" hidden>
+            <label class="form-label" for="base-url-input">Base URL</label>
+            <span class="form-hint" id="base-url-hint"></span>
+            <input type="url" class="input" id="base-url-input" placeholder="https://api.openai.com/v1">
           </div>
 
           <div class="form-group">
             <label class="form-label" for="api-key-input">API Key</label>
+            <span class="form-hint" id="api-key-hint"></span>
             <div class="api-key-wrapper">
               <input type="password" class="input" id="api-key-input" placeholder="Enter your API key...">
               <button class="btn-toggle-visibility" id="btn-toggle-key" title="Show/hide key" type="button">
@@ -73,40 +91,42 @@
                 </svg>
               </button>
             </div>
-            <span class="form-hint" id="api-key-hint"></span>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="provider-select">Provider</label>
-            <select class="select" id="provider-select"></select>
+            <label class="form-label" for="review-style-example-input">Review style example</label>
+            <span class="form-hint">Paste one of your reviews here so the AI can use it as a reference for tone, structure, and writing style.</span>
+            <textarea class="textarea prompt-textarea review-style-example-textarea" id="review-style-example-input" placeholder="Paste an example review..."></textarea>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="model-input">Model</label>
-            <input type="text" class="input" id="model-input" placeholder="Enter the model ID...">
-            <span class="form-hint" id="model-hint"></span>
-          </div>
+          <details class="advanced-settings">
+            <summary class="advanced-settings__summary">
+              <span>
+                <span class="advanced-settings__title">Advanced</span>
+                <span class="advanced-settings__subtitle">Fine-tune generation behavior and system instructions.</span>
+              </span>
+              <svg class="advanced-settings__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </summary>
 
-          <div class="form-group" id="base-url-group" hidden>
-            <label class="form-label" for="base-url-input">Base URL</label>
-            <input type="url" class="input" id="base-url-input" placeholder="https://api.openai.com/v1">
-            <span class="form-hint" id="base-url-hint"></span>
-          </div>
+            <div class="advanced-settings__body">
+              <div class="form-group">
+                <label class="form-label">Temperature</label>
+                <span class="form-hint">Controls creativity. Lower = more focused, Higher = more creative.</span>
+                <div class="temperature-row">
+                  <input type="range" id="temperature-slider" min="0" max="1" step="0.1" value="0.7">
+                  <span class="temperature-value" id="temperature-value">0.7</span>
+                </div>
+              </div>
 
-          <div class="form-group">
-            <label class="form-label">Temperature</label>
-            <div class="temperature-row">
-              <input type="range" id="temperature-slider" min="0" max="1" step="0.1" value="0.7">
-              <span class="temperature-value" id="temperature-value">0.7</span>
+              <div class="form-group">
+                <label class="form-label" for="prompt-input">System Prompt</label>
+                <span class="form-hint">Instructions for the AI when generating the review.</span>
+                <textarea class="textarea prompt-textarea" id="prompt-input" placeholder="Enter your custom system prompt..."></textarea>
+              </div>
             </div>
-            <span class="form-hint">Controls creativity. Lower = more focused, Higher = more creative.</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="prompt-input">System Prompt</label>
-            <textarea class="textarea prompt-textarea" id="prompt-input" placeholder="Enter your custom system prompt..."></textarea>
-            <span class="form-hint">Instructions for the AI when generating the review.</span>
-          </div>
+          </details>
 
           <div class="settings-actions">
             <button class="btn btn--primary btn-save-settings" id="btn-save">Save</button>
