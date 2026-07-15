@@ -23,10 +23,17 @@ function sanitizeUpdateInfo(info = {}) {
 }
 
 class UpdateManager {
-  constructor({ app, autoUpdater, BrowserWindow, logger = console }) {
+  constructor({
+    app,
+    autoUpdater,
+    BrowserWindow,
+    automaticUpdatesSupported = true,
+    logger = console
+  }) {
     this.app = app;
     this.autoUpdater = autoUpdater;
     this.BrowserWindow = BrowserWindow;
+    this.automaticUpdatesSupported = automaticUpdatesSupported;
     this.logger = logger;
     this.started = false;
     this.state = {
@@ -36,12 +43,33 @@ class UpdateManager {
   }
 
   isEnabled() {
-    return this.app.isPackaged;
+    return this.app.isPackaged && this.automaticUpdatesSupported;
+  }
+
+  getDisabledMessage() {
+    if (!this.app.isPackaged) {
+      return 'Update checks are available only in the installed app.';
+    }
+
+    if (!this.automaticUpdatesSupported) {
+      return 'Automatic updates on macOS require a signed build. Download and install updates manually from GitHub Releases.';
+    }
+
+    return 'Automatic updates are unavailable in this build.';
   }
 
   start() {
     if (this.started) return;
     this.started = true;
+
+    if (!this.isEnabled()) {
+      this.state = {
+        ...this.state,
+        status: 'disabled',
+        message: this.getDisabledMessage()
+      };
+      return;
+    }
 
     this.autoUpdater.autoDownload = false;
     this.autoUpdater.autoInstallOnAppQuit = true;
@@ -129,7 +157,7 @@ class UpdateManager {
     if (!this.isEnabled()) {
       return this.setState({
         status: 'disabled',
-        message: 'Update checks are available only in the installed app.'
+        message: this.getDisabledMessage()
       });
     }
 

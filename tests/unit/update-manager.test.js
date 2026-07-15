@@ -4,6 +4,11 @@ const {
   sanitizeUpdateInfo,
   serializeError
 } = require('../../src/main/update-manager');
+const {
+  getMacAppBundlePath,
+  hasDeveloperIdSignature,
+  supportsAutomaticUpdates
+} = require('../../src/main/update-support');
 
 class TestRunner {
   constructor() {
@@ -37,7 +42,7 @@ class TestRunner {
   }
 }
 
-function createManager({ packaged = true } = {}) {
+function createManager({ packaged = true, automaticUpdatesSupported = true } = {}) {
   const sent = [];
   const updater = new EventEmitter();
   updater.checkForUpdates = async () => {};
@@ -56,6 +61,7 @@ function createManager({ packaged = true } = {}) {
     app: { isPackaged: packaged, getVersion: () => '1.0.1' },
     autoUpdater: updater,
     BrowserWindow: { getAllWindows: () => [window] },
+    automaticUpdatesSupported,
     logger: { error: () => {} }
   });
 
@@ -89,6 +95,69 @@ async function runUpdateManagerTests() {
     const status = await manager.check({ manual: true });
     runner.assertEqual(checks, 0);
     runner.assertEqual(status.status, 'disabled');
+  });
+
+  await runner.test('disables automatic updates for unsigned packaged macOS builds', async () => {
+    const { manager, updater } = createManager({ automaticUpdatesSupported: false });
+    let checks = 0;
+    updater.checkForUpdates = async () => { checks++; };
+    manager.start();
+
+    const status = await manager.check({ manual: true });
+    runner.assertEqual(checks, 0);
+    runner.assertEqual(status.status, 'disabled');
+    runner.assert(
+      status.message.includes('signed build'),
+      'The disabled state should explain the signing requirement'
+    );
+  });
+
+  await runner.test('extracts the macOS app bundle from an executable path', () => {
+    runner.assertEqual(
+      getMacAppBundlePath('/Applications/Reviewer2.app/Contents/MacOS/Reviewer2'),
+      '/Applications/Reviewer2.app'
+    );
+    runner.assertEqual(getMacAppBundlePath('/usr/local/bin/reviewer2'), null);
+  });
+
+  await runner.test('accepts only a Developer ID signature with a team identifier', () => {
+    const executablePath = '/Applications/Reviewer2.app/Contents/MacOS/Reviewer2';
+    const signedResult = {
+      status: 0,
+      stdout: '',
+      stderr: 'Authority=Developer ID Application: Example (TEAM123456)\nTeamIdentifier=TEAM123456\n'
+    };
+    const adHocResult = {
+      status: 0,
+      stdout: '',
+      stderr: 'Signature=adhoc\nTeamIdentifier=not set\n'
+    };
+
+    runner.assert(
+      hasDeveloperIdSignature({ executablePath, runCodesign: () => signedResult }),
+      'Developer ID signature should be accepted'
+    );
+    runner.assert(
+      !hasDeveloperIdSignature({ executablePath, runCodesign: () => adHocResult }),
+      'Ad-hoc signature should be rejected'
+    );
+  });
+
+  await runner.test('requires Developer ID only on macOS', () => {
+    let calls = 0;
+    const runCodesign = () => {
+      calls++;
+      return { status: 1, stdout: '', stderr: '' };
+    };
+
+    runner.assert(supportsAutomaticUpdates({ platform: 'win32', runCodesign }));
+    runner.assertEqual(calls, 0, 'Windows should not invoke codesign');
+    runner.assert(!supportsAutomaticUpdates({
+      platform: 'darwin',
+      executablePath: '/Applications/Reviewer2.app/Contents/MacOS/Reviewer2',
+      runCodesign
+    }));
+    runner.assertEqual(calls, 1, 'macOS should verify its code signature');
   });
 
   await runner.test('broadcasts an available update', () => {

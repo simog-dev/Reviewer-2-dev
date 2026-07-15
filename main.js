@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('./src/database/db');
 const { UpdateManager } = require('./src/main/update-manager');
+const { supportsAutomaticUpdates } = require('./src/main/update-support');
 
 if (process.env.TEST_MODE === 'true' && process.env.E2E_USER_DATA_PATH) {
   app.setPath('userData', path.resolve(process.env.E2E_USER_DATA_PATH));
@@ -11,7 +12,12 @@ if (process.env.TEST_MODE === 'true' && process.env.E2E_USER_DATA_PATH) {
 
 let mainWindow;
 let db;
-const updateManager = new UpdateManager({ app, autoUpdater, BrowserWindow });
+const updateManager = new UpdateManager({
+  app,
+  autoUpdater,
+  BrowserWindow,
+  automaticUpdatesSupported: supportsAutomaticUpdates()
+});
 
 function initializeDatabase() {
   if (!db) {

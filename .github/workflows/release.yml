@@ -147,7 +147,21 @@ jobs:
           CSC_LINK: ${{ env.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ env.MAC_CSC_KEY_PASSWORD }}
 
-      - name: Upload macOS release files
+      - name: Upload unsigned macOS release files
+        if: env.MAC_CSC_LINK == '' || env.APPLE_ID == '' || env.APPLE_APP_SPECIFIC_PASSWORD == '' || env.APPLE_TEAM_ID == ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*.zip
+            dist/*.zip.blockmap
+
+      - name: Upload signed macOS release files
+        if: env.MAC_CSC_LINK != '' && env.APPLE_ID != '' && env.APPLE_APP_SPECIFIC_PASSWORD != '' && env.APPLE_TEAM_ID != ''
         uses: actions/upload-artifact@v7
         with:
           name: release-macos

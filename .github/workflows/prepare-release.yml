@@ -46,6 +46,28 @@ jobs:
             echo "prepare=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Clear stale labels from abandoned release pull requests
+        if: steps.release-merge.outputs.prepare == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state closed \
+            --label "autorelease: pending" \
+            --limit 100 \
+            --json number,mergedAt \
+            --jq '.[] | select(.mergedAt == null) | .number' |
+          while read -r pr_number; do
+            if [[ -n "$pr_number" ]]; then
+              echo "Removing stale autorelease label from PR #$pr_number"
+              gh pr edit "$pr_number" \
+                --repo "$GITHUB_REPOSITORY" \
+                --remove-label "autorelease: pending"
+            fi
+          done
+
       - name: Prepare release pull request only
         if: steps.release-merge.outputs.prepare == 'true'
         uses: googleapis/release-please-action@v5
