@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/simog-dev/Reviewer-2-dev/compare/v1.0.4...v1.0.5) (2026-07-15)
+
+
+### Bug Fixes
+
+* handle unsigned macOS updates and stale release PRs ([101bf71](https://github.com/simog-dev/Reviewer-2-dev/commit/101bf7198bd9358badd7e10deaed029bde96d6b7))
+
 ## [1.0.4](https://github.com/simog-dev/Reviewer-2-dev/compare/v1.0.3...v1.0.4) (2026-07-14)
 
 
