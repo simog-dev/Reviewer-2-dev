@@ -1727,45 +1727,34 @@ html[data-theme="dark"] .annotation-modal .category-badge {
   border-top: 8px solid var(--color-primary, #3b82f6);
 }
 
-/* Citation Links in Text Layer */
-.textLayer .citation-link {
+/* Citation links are geometric overlays; the PDF.js text DOM stays immutable. */
+.citation-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.citation-overlay .citation-link {
   cursor: pointer;
-  position: static;
-  display: inline-block;
-  line-height: 1;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  position: absolute;
+  display: block;
+  appearance: none;
+  padding: 0;
+  background: transparent;
   border-radius: 2px;
-  margin: -1px -1px;
   border: 1.5px solid var(--color-primary);
   box-sizing: border-box;
+  pointer-events: auto;
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-/* Multi-span citations: seamless borders between parts */
-.textLayer .citation-link.citation-start {
-  border-right: none;
-  border-radius: 2px 0 0 2px;
-  margin-right: 0;
-}
-
-.textLayer .citation-link.citation-middle {
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
-  margin-left: 0;
-  margin-right: 0;
-}
-
-.textLayer .citation-link.citation-end {
-  border-left: none;
-  border-radius: 0 2px 2px 0;
-  margin-left: 0;
-}
-
-.textLayer .citation-link:hover {
+.citation-overlay .citation-link:hover,
+.citation-overlay .citation-link:focus-visible {
   background-color: rgba(59, 130, 246, 0.15);
   border-color: var(--color-primary-hover);
+  outline: none;
 }
 
 /* Citation Popup */

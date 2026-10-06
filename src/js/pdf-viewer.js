@@ -2,7 +2,9 @@
 // Compatible with pdfjs-dist v6.x
 
 import * as pdfjsLib from '../vendor/pdfjs-dist/legacy/build/pdf.min.mjs';
-import { extractReferencesFromPages, findCitationsInText, parseCitationNumbers } from './reference-parser.js';
+import { extractReferencesFromPages, findCitationsInText } from './reference-parser.js';
+import { planCitationFragments } from './citation-span-planner.js';
+import { buildCitationTextModel } from './citation-text-model.js';
 
 // Initialize PDF.js worker
 const pdfjsWorkerSrc = new URL('../vendor/pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).href;
@@ -60,12 +62,12 @@ export class PDFViewer {
     this.dualPageMode = false;
 
     // Reference tracking
-    this.references = new Map();        // number → Reference object
+    this.references = new Map();        // reference id → Reference object
     this.citationSpans = new Map();     // pageNumber → array of citation spans
     this.referencesExtracted = false;
     this.pageContentBands = new Map();  // pageNumber → {minY, maxY} in PDF coords
     this.refPages = new Set();          // pages that contain reference entries
-    this.refFormat = 'bracket';         // 'bracket' ([N]) or 'dot' (N.)
+    this.refFormat = 'bracket';         // 'bracket', 'dot', or 'author-year'
     this.searchPageCache = new Map();   // pageNumber → searchable text + coordinate index
     this.textLayerSelectionCleanupBound = false;
     this.selectionDragStart = null;
@@ -171,9 +173,13 @@ export class PDFViewer {
       highlightCanvas.width = 0;
       highlightCanvas.height = 0;
 
+      const citationOverlay = document.createElement('div');
+      citationOverlay.className = 'citation-overlay';
+
       pageContainer.appendChild(canvas);
       pageContainer.appendChild(highlightCanvas);
       pageContainer.appendChild(textLayerDiv);
+      pageContainer.appendChild(citationOverlay);
       // Append to viewer; rebuildLayout will reorganize if dual mode
       this.viewerElement.appendChild(pageContainer);
 
@@ -181,8 +187,10 @@ export class PDFViewer {
         container: pageContainer,
         canvas,
         textLayer: textLayerDiv,
+        citationOverlay,
         highlightCanvas,
-        viewport
+        viewport,
+        textContentItems: []
       });
 
       // Click hit-test for highlight navigation.
@@ -548,7 +556,7 @@ export class PDFViewer {
       return;
     }
 
-    const { canvas, textLayer: textLayerDiv, highlightCanvas } = elements;
+    const { canvas, textLayer: textLayerDiv, citationOverlay, highlightCanvas } = elements;
     const pixelRatio = window.devicePixelRatio || 1;
 
     // Canvas renders at device-pixel resolution for crisp output on retina displays.
@@ -594,6 +602,9 @@ export class PDFViewer {
         const str = (item.str || '').trim();
         return !/^For\s+Peer\s+Review$/i.test(str);
       });
+      elements.textContentItems = textContent.items.filter(item =>
+        typeof item.str === 'string' && item.str.length > 0
+      );
 
       if (pdfjs.TextLayer) {
         const textLayer = new pdfjs.TextLayer({
@@ -614,6 +625,8 @@ export class PDFViewer {
     } catch (textError) {
       console.warn('Text layer rendering failed:', textError);
     }
+
+    citationOverlay.replaceChildren();
 
     // Mark citations in the text layer
     this.markCitationsOnPage(pageNumber);
@@ -660,6 +673,8 @@ export class PDFViewer {
       elements.canvas.style.width = '';
       elements.canvas.style.height = '';
       elements.textLayer.innerHTML = '';
+      elements.citationOverlay.replaceChildren();
+      elements.textContentItems = [];
       elements.highlightCanvas.width = 0;
       elements.highlightCanvas.height = 0;
       elements.highlightCanvas.style.width = '';
@@ -1808,7 +1823,7 @@ export class PDFViewer {
 
   /**
    * Get references map for external access
-   * @returns {Map<number, Reference>}
+   * @returns {Map<number|string, Reference>}
    */
   getReferences() {
     return this.references;
@@ -1820,19 +1835,10 @@ export class PDFViewer {
    */
   markCitationsOnPage(pageNumber) {
     const elements = this.pageElements.get(pageNumber);
-    if (!elements || !elements.textLayer) return;
+    if (!elements?.textLayer || !elements.citationOverlay) return;
 
     const textLayer = elements.textLayer;
-
-    // Remove previously marked citations on this page
-    textLayer.querySelectorAll('.citation-link').forEach(span => {
-      // Unwrap the citation link
-      const parent = span.parentNode;
-      while (span.firstChild) {
-        parent.insertBefore(span.firstChild, span);
-      }
-      parent.removeChild(span);
-    });
+    elements.citationOverlay.replaceChildren();
 
     // Clear tracking for this page
     this.citationSpans.set(pageNumber, []);
@@ -1841,53 +1847,17 @@ export class PDFViewer {
     const textSpans = Array.from(textLayer.querySelectorAll('span[role="presentation"]'));
     if (textSpans.length === 0) return;
 
-    // Build a map of span index to span element and concatenated text
-    const spanMap = [];
-    let fullText = '';
+    const sources = textSpans.map((span, index) => ({
+      span,
+      text: span.textContent || '',
+      item: elements.textContentItems[index] || null
+    }));
+    const { text: fullText, spanMap } = buildCitationTextModel(sources);
 
-    textSpans.forEach((span, index) => {
-      const text = span.textContent || '';
-      spanMap.push({
-        span,
-        text,
-        startOffset: fullText.length,
-        endOffset: fullText.length + text.length
-      });
-      fullText += text;
-    });
+    // Find numeric and author-year citations in the concatenated text.
+    const citations = findCitationsInText(fullText, this.references);
 
-    // Find all [N] bracket citations in the concatenated text
-    const citations = findCitationsInText(fullText);
-
-    // For each citation, find which spans it touches and wrap them
-    for (const citation of citations) {
-      const citationStart = citation.index;
-      const citationEnd = citation.index + citation.match.length;
-
-      // Find all spans that overlap with this citation
-      const affectedSpans = [];
-      for (const spanInfo of spanMap) {
-        if (spanInfo.endOffset <= citationStart) continue; // Span is before citation
-        if (spanInfo.startOffset >= citationEnd) break;     // Span is after citation
-
-        // This span overlaps with the citation
-        affectedSpans.push({
-          ...spanInfo,
-          citationStartInSpan: Math.max(0, citationStart - spanInfo.startOffset),
-          citationEndInSpan: Math.min(spanInfo.text.length, citationEnd - spanInfo.startOffset)
-        });
-      }
-
-      // Create citation link wrapper
-      if (affectedSpans.length === 1) {
-        // Simple case: citation is within a single span
-        const { span, citationStartInSpan, citationEndInSpan } = affectedSpans[0];
-        this._wrapCitationInSingleSpan(span, citationStartInSpan, citationEndInSpan, citation.match, citation.numbers, pageNumber);
-      } else if (affectedSpans.length > 1) {
-        // Complex case: citation spans multiple spans
-        this._wrapCitationAcrossSpans(affectedSpans, citation.match, citation.numbers, pageNumber);
-      }
-    }
+    this._renderCitationOverlays(spanMap, citations, pageNumber);
 
     // On reference pages with dot format (N.), wrap reference numbers as citation links
     if (this.refFormat === 'dot' && this.refPages.has(pageNumber)) {
@@ -1903,14 +1873,10 @@ export class PDFViewer {
    * on reference section pages. These spans contain just the number+dot.
    */
   _markDotReferencesOnPage(textSpans, pageNumber) {
-    const pageCitations = this.citationSpans.get(pageNumber) || [];
     const dotPattern = /^\s*(\d+)\.\s*$/;
 
     for (const span of textSpans) {
-      // Skip spans already wrapped
-      if (span.querySelector('.citation-link')) continue;
-
-      const text = span.textContent;
+      const text = span.textContent || '';
       const match = text.match(dotPattern);
       if (!match) continue;
 
@@ -1918,108 +1884,92 @@ export class PDFViewer {
       // Only wrap if this reference number exists in our extracted references
       if (!this.references.has(refNum)) continue;
 
-      const citationSpan = document.createElement('span');
-      citationSpan.className = 'citation-link';
-      citationSpan.textContent = text;
-      citationSpan.dataset.numbers = JSON.stringify([refNum]);
-
-      pageCitations.push({ span: citationSpan, numbers: [refNum] });
-
-      span.textContent = '';
-      span.appendChild(citationSpan);
+      const citationTargets = [{ id: refNum, label: `[${refNum}]` }];
+      this._appendCitationOverlay({ span, text }, {
+        start: 0,
+        end: text.length,
+        targets: citationTargets,
+        partIndex: 0,
+        partCount: 1
+      }, pageNumber);
     }
-
-    this.citationSpans.set(pageNumber, pageCitations);
   }
 
   /**
-   * Wrap a citation that is entirely within a single span
+   * Draw citations as geometric overlays. The PDF.js text DOM remains immutable,
+   * so adjacent citations, selections, and repeated analysis cannot interfere.
    */
-  _wrapCitationInSingleSpan(span, startIdx, endIdx, citationText, citationNumbers, pageNumber) {
-    const text = span.textContent;
-    const fragment = document.createDocumentFragment();
+  _renderCitationOverlays(spanMap, citations, pageNumber) {
+    const fragmentsBySpan = planCitationFragments(spanMap, citations);
 
-    // Text before citation
-    if (startIdx > 0) {
-      fragment.appendChild(document.createTextNode(text.substring(0, startIdx)));
+    for (const spanInfo of spanMap) {
+      const citationFragments = fragmentsBySpan.get(spanInfo.span);
+      if (!citationFragments || citationFragments.length === 0) continue;
+      for (const citationFragment of citationFragments) {
+        this._appendCitationOverlay(spanInfo, citationFragment, pageNumber);
+      }
     }
-
-    // Citation link
-    const citationSpan = document.createElement('span');
-    citationSpan.className = 'citation-link';
-    citationSpan.textContent = citationText;
-    citationSpan.dataset.numbers = JSON.stringify(citationNumbers);
-
-    const pageCitations = this.citationSpans.get(pageNumber) || [];
-    pageCitations.push({ span: citationSpan, numbers: citationNumbers });
-    this.citationSpans.set(pageNumber, pageCitations);
-
-    fragment.appendChild(citationSpan);
-
-    // Text after citation
-    if (endIdx < text.length) {
-      fragment.appendChild(document.createTextNode(text.substring(endIdx)));
-    }
-
-    // Replace span content
-    span.textContent = '';
-    span.appendChild(fragment);
   }
 
-  /**
-   * Wrap a citation that spans across multiple spans
-   * Each affected span gets its own citation wrapper with the same data
-   */
-  _wrapCitationAcrossSpans(affectedSpans, citationText, citationNumbers, pageNumber) {
-    const pageCitations = this.citationSpans.get(pageNumber) || [];
+  _rangeForTextOffsets(root, start, end) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    let startNode = null;
+    let startOffset = 0;
+    let endNode = null;
+    let endOffset = 0;
+    let node;
 
-    // Process each affected span
-    for (let i = 0; i < affectedSpans.length; i++) {
-      const { span, text, citationStartInSpan, citationEndInSpan } = affectedSpans[i];
-      const isFirst = i === 0;
-      const isLast = i === affectedSpans.length - 1;
-
-      const fragment = document.createDocumentFragment();
-
-      // Add text before citation (only in first span)
-      if (isFirst && citationStartInSpan > 0) {
-        fragment.appendChild(document.createTextNode(text.substring(0, citationStartInSpan)));
+    while ((node = walker.nextNode())) {
+      const nextOffset = offset + node.textContent.length;
+      if (!startNode && start >= offset && start <= nextOffset) {
+        startNode = node;
+        startOffset = Math.min(start - offset, node.textContent.length);
       }
-
-      // Create citation wrapper for this part
-      const citationPart = document.createElement('span');
-      citationPart.className = 'citation-link';
-      citationPart.dataset.numbers = JSON.stringify(citationNumbers);
-      citationPart.textContent = text.substring(citationStartInSpan, citationEndInSpan);
-
-      // Add position class for seamless border rendering
-      if (isFirst && isLast) {
-        // Single span (shouldn't happen here, but just in case)
-      } else if (isFirst) {
-        citationPart.classList.add('citation-start');
-      } else if (isLast) {
-        citationPart.classList.add('citation-end');
-      } else {
-        citationPart.classList.add('citation-middle');
+      if (end >= offset && end <= nextOffset) {
+        endNode = node;
+        endOffset = Math.min(end - offset, node.textContent.length);
+        break;
       }
-
-      // Track only the first citation span (for event handling)
-      if (isFirst) {
-        pageCitations.push({ span: citationPart, numbers: citationNumbers });
-      }
-
-      fragment.appendChild(citationPart);
-
-      // Add text after citation (only in last span)
-      if (isLast && citationEndInSpan < text.length) {
-        fragment.appendChild(document.createTextNode(text.substring(citationEndInSpan)));
-      }
-
-      // Replace span content
-      span.textContent = '';
-      span.appendChild(fragment);
+      offset = nextOffset;
     }
 
+    if (!startNode || !endNode) return null;
+    const range = document.createRange();
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+    return range;
+  }
+
+  _appendCitationOverlay(spanInfo, citationFragment, pageNumber) {
+    if (citationFragment.end <= citationFragment.start) return;
+    const elements = this.pageElements.get(pageNumber);
+    if (!elements?.citationOverlay) return;
+
+    const range = this._rangeForTextOffsets(
+      spanInfo.span,
+      citationFragment.start,
+      citationFragment.end
+    );
+    if (!range) return;
+
+    const pageRect = elements.container.getBoundingClientRect();
+    const pageCitations = this.citationSpans.get(pageNumber) || [];
+    for (const rect of range.getClientRects()) {
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      const citationLink = document.createElement('button');
+      citationLink.type = 'button';
+      citationLink.className = 'citation-link';
+      citationLink.dataset.citationTargets = JSON.stringify(citationFragment.targets);
+      citationLink.setAttribute('aria-label', citationFragment.targets.map(target => target.label).join('; '));
+      citationLink.style.left = `${rect.left - pageRect.left}px`;
+      citationLink.style.top = `${rect.top - pageRect.top}px`;
+      citationLink.style.width = `${rect.width}px`;
+      citationLink.style.height = `${rect.height}px`;
+
+      elements.citationOverlay.appendChild(citationLink);
+      pageCitations.push({ span: citationLink, targets: citationFragment.targets });
+    }
     this.citationSpans.set(pageNumber, pageCitations);
   }
 
@@ -2029,28 +1979,27 @@ export class PDFViewer {
    */
   setupCitationHoverListeners(pageNumber) {
     const elements = this.pageElements.get(pageNumber);
-    if (!elements || !elements.textLayer) return;
+    if (!elements?.citationOverlay) return;
+    const citationOverlay = elements.citationOverlay;
+    if (citationOverlay.dataset.listenersBound === 'true') return;
+    citationOverlay.dataset.listenersBound = 'true';
 
-    const textLayer = elements.textLayer;
-
-    // Use event delegation on the text layer
-    textLayer.addEventListener('mouseover', (e) => {
+    citationOverlay.addEventListener('mouseover', (e) => {
       const citationLink = e.target.closest('.citation-link');
       if (!citationLink) return;
 
-      const numbers = JSON.parse(citationLink.dataset.numbers || '[]');
-      if (numbers.length === 0) return;
+      const targets = JSON.parse(citationLink.dataset.citationTargets || '[]');
+      if (targets.length === 0) return;
 
-      // Get references for these numbers
-      const refs = numbers.map(num => ({
-        number: num,
-        reference: this.references.get(num) || null
+      const refs = targets.map(target => ({
+        id: target.id,
+        label: target.label,
+        reference: target.id === null ? null : (this.references.get(target.id) || null)
       }));
 
       const rect = citationLink.getBoundingClientRect();
 
       this.onCitationHover({
-        numbers,
         references: refs,
         mouseX: rect.left + rect.width / 2,
         mouseY: rect.bottom,
@@ -2058,13 +2007,13 @@ export class PDFViewer {
       });
     });
 
-    textLayer.addEventListener('mouseout', (e) => {
+    citationOverlay.addEventListener('mouseout', (e) => {
       const citationLink = e.target.closest('.citation-link');
       if (!citationLink) return;
 
       // Check if we're moving to the popup (don't hide if so)
       const relatedTarget = e.relatedTarget;
-      if (relatedTarget && relatedTarget.closest('.citation-popup')) return;
+      if (relatedTarget?.closest?.('.citation-popup')) return;
 
       this.onCitationLeave();
     });
