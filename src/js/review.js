@@ -502,7 +502,7 @@ function hideHighlightPopup() {
 }
 
 // Citation popup handlers
-function handleCitationHover({ numbers, references, mouseX, mouseY, element }) {
+function handleCitationHover({ references, mouseX, mouseY, element }) {
   // Clear any pending hide timeout
   if (citationPopupTimeout) {
     clearTimeout(citationPopupTimeout);
@@ -519,22 +519,23 @@ function handleCitationHover({ numbers, references, mouseX, mouseY, element }) {
 
   // Build reference list HTML with individual copy buttons
   let html = '';
-  for (const { number, reference } of references) {
+  references.forEach(({ label, reference }, referenceIndex) => {
+    const displayLabel = escapeHtml(label || 'Reference');
     if (reference) {
       const hasLink = reference.doi || reference.url;
       const searchTitle = hasLink ? 'Open link' : 'Search on Google';
       html += `
         <div class="citation-reference-item">
           <div class="citation-reference-header">
-            <span class="citation-reference-number">[${number}]</span>
+            <span class="citation-reference-number">${displayLabel}</span>
             <div class="citation-reference-actions">
-              <button class="citation-action-btn" data-action="copy" data-number="${number}" title="Copy">
+              <button class="citation-action-btn" data-action="copy" data-reference-index="${referenceIndex}" title="Copy">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
               </button>
-              <button class="citation-action-btn citation-search-btn" data-action="search" data-number="${number}" title="${searchTitle}">
+              <button class="citation-action-btn citation-search-btn" data-action="search" data-reference-index="${referenceIndex}" title="${searchTitle}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="11" cy="11" r="8"/>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -550,7 +551,7 @@ function handleCitationHover({ numbers, references, mouseX, mouseY, element }) {
       html += `
         <div class="citation-reference-item">
           <div class="citation-reference-header">
-            <span class="citation-reference-number">[${number}]</span>
+            <span class="citation-reference-number">${displayLabel}</span>
             <div class="citation-reference-actions">
               <button class="citation-action-btn" disabled title="No reference to copy">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -571,7 +572,7 @@ function handleCitationHover({ numbers, references, mouseX, mouseY, element }) {
         </div>
       `;
     }
-  }
+  });
   citationReferenceList.innerHTML = html;
 
   // Position popup directly below the citation element for easier mouse movement
@@ -619,11 +620,13 @@ function hideCitationPopup() {
   citationPopupLocked = false;
 }
 
-function copySingleReference(number) {
-  const ref = currentCitationRefs.find(r => r.number === number);
+function copySingleReference(referenceIndex) {
+  const ref = currentCitationRefs[referenceIndex];
   if (!ref || !ref.reference) return;
 
-  const text = `[${number}] ${ref.reference.text}`;
+  const text = ref.reference.number === null
+    ? ref.reference.text
+    : `[${ref.reference.number}] ${ref.reference.text}`;
   navigator.clipboard.writeText(text).then(() => {
     showToast('Reference copied to clipboard', 'success');
   }).catch(err => {
@@ -632,8 +635,8 @@ function copySingleReference(number) {
   });
 }
 
-function searchSingleReference(number) {
-  const ref = currentCitationRefs.find(r => r.number === number);
+function searchSingleReference(referenceIndex) {
+  const ref = currentCitationRefs[referenceIndex];
   if (!ref || !ref.reference) return;
 
   let url = null;
@@ -2139,12 +2142,12 @@ function setupEventListeners() {
     if (!btn || btn.disabled) return;
 
     const action = btn.dataset.action;
-    const number = parseInt(btn.dataset.number, 10);
+    const referenceIndex = parseInt(btn.dataset.referenceIndex, 10);
 
     if (action === 'copy') {
-      copySingleReference(number);
+      copySingleReference(referenceIndex);
     } else if (action === 'search') {
-      searchSingleReference(number);
+      searchSingleReference(referenceIndex);
     }
   });
 
