@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.6](https://github.com/simog-dev/Reviewer-2-dev/compare/v1.0.5...v1.0.6) (2026-10-06)
+
+
+### Bug Fixes
+
+* improve reference and citation detection ([45ffcd5](https://github.com/simog-dev/Reviewer-2-dev/commit/45ffcd52adcd897e21b6db9a0d06df7f551960a8))
+* improve reference and citation detection ([56a49b6](https://github.com/simog-dev/Reviewer-2-dev/commit/56a49b63c6c8b34fb3185d17bba81ff684dbe70a))
+
 ## [1.0.5](https://github.com/simog-dev/Reviewer-2-dev/compare/v1.0.4...v1.0.5) (2026-07-15)
 
 
